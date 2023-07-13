@@ -15,6 +15,8 @@ module ProvisionEngine
 
             @client_oned = client_oned(credentials)
             @client_flow = client_flow(credentials)
+
+            log_init
         end
 
         def vm_get(id)
@@ -129,7 +131,7 @@ module ProvisionEngine
         end
 
         def log_init
-            return unless @conf[:log] > 1
+            return unless @conf[:log][:level] > 1
 
             puts "Using oned at #{@conf[:one_xmlrpc]}"
             puts "Using oneflow at #{@conf[:oneflow_server]}"
