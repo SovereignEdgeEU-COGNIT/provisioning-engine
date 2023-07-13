@@ -16,7 +16,6 @@ module ProvisionEngine
         }
 
         FIXED = {
-            :document_type => 1337,
             :configuration_path => '/etc/one/provision_engine.conf'
         }
 
