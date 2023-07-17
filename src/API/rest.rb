@@ -1,5 +1,4 @@
 require 'sinatra'
-require 'json'
 
 # In-memory storage for serverless runtimes (Replace with a persistent storage mechanism in a production environment)
 $serverless_runtimes = {}
@@ -19,7 +18,7 @@ post '/serverless-runtimes' do
     content_type :json
     { :id => id, :serverless_runtime => data }.to_json
 end
-    
+
 # Retrieve Serverless Runtime
 get '/serverless-runtimes/:id' do |id|
     serverless_runtime = $serverless_runtimes[id]
