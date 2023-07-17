@@ -1,7 +1,5 @@
 require 'opennebula'
 require 'opennebula/oneflow_client'
-require_relative 'configuration'
-require_relative 'faas'
 
 module ProvisionEngine
 

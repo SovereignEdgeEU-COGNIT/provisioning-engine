@@ -1,5 +1,3 @@
-require 'json'
-
 module OpenNebula
 
     # Serverless runtime class as wrapper of DocumentJSON

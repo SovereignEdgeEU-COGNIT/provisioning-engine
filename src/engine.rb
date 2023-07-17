@@ -24,14 +24,30 @@ end
 
 $LOAD_PATH << RUBY_LIB_LOCATION
 
-require_relative 'client'
+require 'json'
+require 'yaml'
 
-def tests(client)
-    test_vm_id = 9328
-    vm = client.vm_get(test_vm_id)
-    puts vm.id
+parent_directory = File.expand_path('..', __dir__)
+$LOAD_PATH.unshift(parent_directory)
+
+require 'log'
+require 'configuration'
+require 'faas'
+require 'client'
+require 'rest'
+
+module ProvisionEngine
+
+    class Engine
+
+        def initialize
+            @conf	= Configuration.new
+            @logger = Logger.new(@conf)
+            @client = CloudClient.new(@conf)
+
+			# start rest API
+        end
+
+    end
+
 end
-
-credentials = ARGV[0]
-client = ProvisionEngine::CloudClient.new(credentials)
-tests(client)
