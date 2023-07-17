@@ -24,12 +24,14 @@ end
 
 $LOAD_PATH << RUBY_LIB_LOCATION
 
+# Shared Libraries for Modules
 require 'json'
 require 'yaml'
 
 parent_directory = File.expand_path('..', __dir__)
 $LOAD_PATH.unshift(parent_directory)
 
+# Engine Modules
 require 'log'
 require 'configuration'
 require 'faas'
@@ -43,9 +45,11 @@ module ProvisionEngine
         def initialize
             @conf	= Configuration.new
             @logger = Logger.new(@conf)
+
+			logger.info("Initializing Provision Engine")
             @client = CloudClient.new(@conf)
 
-			# start rest API
+            # start rest API with sinatra
         end
 
     end
