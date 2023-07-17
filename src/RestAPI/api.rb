@@ -19,7 +19,7 @@ post '/serverless-runtimes' do
     content_type :json
     { :id => id, :serverless_runtime => data }.to_json
 end
-
+    
 # Retrieve Serverless Runtime
 get '/serverless-runtimes/:id' do |id|
     serverless_runtime = $serverless_runtimes[id]
