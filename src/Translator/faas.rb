@@ -7,7 +7,7 @@ module OpenNebula
 
         def allocate(template)
             template = JSON.parse(template)
-            FaaS.validate(template)
+            FaaS.valid_definition?(template)
 
             template['registration_time'] = Integer(Time.now)
 
@@ -15,7 +15,11 @@ module OpenNebula
         end
 
         # Ensures the submitted template is valid
-        def self.validate(template); end
+        def self.valid_definition?(template)
+            return false unless template
+
+            true
+        end
 
     end
 

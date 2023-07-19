@@ -1,32 +1,81 @@
 require 'logger'
+require 'fileutils'
+require 'syslog'
 
 module ProvisionEngine
 
-    class Logger
+    #
+    # Logging system for the provision engine components
+    #
+    class Log
 
-        LOG_FILE = 'logfile.log'
-
-        def initialize
-            @logger = Logger.new(LOG_FILE)
-            @logger.formatter = proc {|severity, datetime, _, msg|
-                "[#{datetime}] #{severity.upcase}: #{msg}\n"
+        # Directory that holds component logs
+        LOGS = '/var/log/one/provisionengine'
+        # Mapping of log levels to their corresponding methods in each logging system
+        LOG_LEVEL_METHODS = {
+            'file' => {
+                :error => :error, :warning => :warn, :info => :info, :debug => :debug
+            },
+            'syslog' => {
+                :error => :err, :warning => :warning, :info => :info, :debug => :debug
             }
+        }
+
+        #
+        # @param [Hash] config Log configuration as defined in provision_engine.conf
+        # @param [String] component File where the logs will be written
+        #
+        def initialize(config, component = 'engine')
+            @component = component
+            @system = config[:system] || 'file'
+
+            case @system
+            when 'file'
+                initialize_file_logger(config[:level])
+            when 'syslog'
+                initialize_syslog_logger
+            else
+                msg = "Invalid logging system: #{@system}. Fallback to file logging"
+                STDERR.puts msg
+
+                initialize_file_logger(config[:level])
+            end
+
+            define_log_level_methods
+
+            info("Initializing Provision Engine component: #{component}")
         end
 
-        def debug(message)
-            @logger.debug(message)
+        private
+
+        def initialize_file_logger(level)
+            FileUtils.mkdir_p(LOGS) unless Dir.exist?(LOGS)
+            file = File.join(LOGS, "#{@component}.log")
+
+            @logger = Logger.new(file)
+            @logger.level = level || Logger::INFO
+            @logger.datetime_format = '%Y-%m-%d %H:%M:%S'
         end
 
-        def info(message)
-            @logger.info(message)
+        def initialize_syslog_logger
+            Syslog.open(@component, Syslog::LOG_PID, Syslog::LOG_USER)
         end
 
-        def warning(message)
-            @logger.warn(message)
-        end
+        #
+        # Dynamically define methods for each supported logging level based on the log system
+        #
+        def define_log_level_methods
+            LOG_LEVEL_METHODS[@system].each do |level, method_name|
+                define_method(level) do |message|
+                    if @system == 'file'
+                        @logger.send(method_name, message)
+                    elsif @system == 'syslog'
+                        Syslog.send(method_name, message)
+                    end
+                end
+            end
 
-        def error(message)
-            @logger.error(message)
+            alias_method :log, :info
         end
 
     end

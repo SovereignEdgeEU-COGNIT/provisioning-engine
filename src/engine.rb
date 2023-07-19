@@ -36,20 +36,26 @@ require 'log'
 require 'configuration'
 require 'faas'
 require 'client'
-require 'rest'
+require 'api'
 
 module ProvisionEngine
 
+    #
+    # Orchestrator. Initializes components and connects them.
+    #
     class Engine
 
         def initialize
             @conf	= Configuration.new
+
             @logger = Logger.new(@conf)
+            @client = CloudClient.new(@conf, @logger)
+            @api = API.start(@conf, @client)
+        end
 
-			logger.info("Initializing Provision Engine")
-            @client = CloudClient.new(@conf)
-
-            # start rest API with sinatra
+        def stop
+            @logger.info('Stopping Provision Engine')
+            @api.stop
         end
 
     end
