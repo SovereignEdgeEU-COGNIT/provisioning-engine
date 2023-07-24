@@ -27,7 +27,8 @@ CONF_FILE="provision_engine.conf"
 CONF_PATH="${CONF_DIR}/${CONF_FILE}"
 EXEC_FILE="/usr/bin/opengine"
 
-SRC="log.rb configuration.rb API/rest.rb CloudClient/client.rb CloudClient/faas.rb"
+SRC="log.rb configuration.rb API/rest.rb CloudClient/client.rb"
+SRC="${SRC} Translator/data.rb Translator/function.rb Translator/runtime.rb"
 
 action="${1:-"install"}"
 install_dir="${2:-"/opt/ProvisionEngine"}"

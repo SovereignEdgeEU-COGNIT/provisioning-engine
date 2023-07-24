@@ -1,7 +1,7 @@
-module OpenNebula
+module ProvisionEngine
 
     # Serverless runtime class as wrapper of DocumentJSON
-    class FaaS < DocumentJSON
+    class ServerlessRuntime < OpenNebula::DocumentJSON
 
         DOCUMENT_TYPE = 1337
 
