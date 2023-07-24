@@ -7,7 +7,8 @@ module ProvisionEngine
     #
     # Logging system for the provision engine components
     #
-    class Log
+    # TODO: Log rotation
+    class Logger
 
         # Directory that holds component logs
         LOGS = '/var/log/one/provisionengine'

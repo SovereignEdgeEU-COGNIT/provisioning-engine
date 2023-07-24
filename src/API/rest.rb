@@ -1,107 +1,119 @@
 require 'sinatra'
+require 'json'
 
 module ProvisionEngine
 
     class API
 
-        # Start the REST API with log level and system configuration
+        RETURN_CODE = 'Response HTTP Return Code'.freeze
+        NOT_FOUND = 'Serverless Runtime not found'.freeze
+
         def initialize(config, cloud_client)
-            log_config = config[:log]
-            host = config[:host]
-            port = config[:port]
-
-            logger = Log.new(log_config, 'api')
-
-            # Log API call with info log level
-            before do
-                logger.info("API Call: #{request.request_method} #{request.fullpath}")
-            end
-
-            # Create Serverless Runtime
-            post '/serverless-runtimes' do
-                request_body = JSON.parse(request.body.read)
-                id = cloud_client.function_create(request_body)
-
-                logger.info('Response HTTP Return Code: 201')
-                logger.info("Response Body: #{cloud_client.function_get(id)}")
-
-                json_response({ :id => id, **request_body }, 201)
-            end
-
-            # Retrieve Serverless Runtime
-            get '/serverless-runtimes/:id' do
-                id = params[:id].to_i
-                faas_function = cloud_client.function_get(id)
-
-                if faas_function
-                    logger.info('Response HTTP Return Code: 200')
-                    logger.info("Response Body: #{faas_function}")
-
-                    json_response(faas_function)
-                else
-                    logger.error('Response HTTP Return Code: 404')
-                    logger.error('Response Body: { "message": "Serverless Runtime not found" }')
-
-                    status 404
-                    json_response({ :message => 'Serverless Runtime not found' })
-                end
-            end
-
-            # Update Serverless Runtime
-            put '/serverless-runtimes/:id' do
-                id = params[:id].to_i
-                faas_function = cloud_client.function_get(id)
-
-                if faas_function
-                    request_body = JSON.parse(request.body.read)
-                    cloud_client.function_update(id, request_body)
-
-                    logger.info('Response HTTP Return Code: 200')
-                    logger.info("Response Body: #{cloud_client.function_get(id)}")
-
-                    json_response({ :id => id, **request_body })
-                else
-                    logger.error('Response HTTP Return Code: 404')
-                    logger.error('Response Body: { "message": "Serverless Runtime not found" }')
-
-                    status 404
-                    json_response({ :message => 'Serverless Runtime not found' })
-                end
-            end
-
-            # Delete Serverless Runtime
-            delete '/serverless-runtimes/:id' do
-                id = params[:id].to_i
-                faas_function = cloud_client.function_get(id)
-
-                if faas_function
-                    cloud_client.function_delete(id)
-
-                    logger.info('Response HTTP Return Code: 204')
-
-                    status 204
-                else
-                    logger.error('Response HTTP Return Code: 404')
-                    logger.error('Response Body: { "message": "Serverless Runtime not found" }')
-
-                    status 404
-                    json_response({ :message => 'Serverless Runtime not found' })
-                end
-            end
-
-            set :bind, host
-            set :port, port
-
-            @pid = Process.pid
-            run!
+            @config = config
+            @cloud_client = cloud_client
+            setup_logger
+            setup_routes
+            run_server
         end
 
         def kill
-            @logger.info("Killing API pid #{@pid}")
-            Process.kill('INT', @pid)
+            @logger.info("Killing API pid #{Process.pid}")
+            Process.kill('INT', Process.pid)
         end
 
         private
+
+        def setup_logger
+            @logger = Logger.new(@config[:log], 'api')
+
+            # Log API Calls
+            before do
+                @logger.info("API Call: #{request.request_method} #{request.fullpath}")
+            end
+        end
+
+        def setup_routes
+            post '/serverless-runtimes' do
+                begin
+                    request_body = JSON.parse(request.body.read)
+                    id = @cloud_client.runtime_create(request_body)
+
+                    @logger.info("#{RETURN_CODE}: 201")
+                    @logger.info("Response Body: #{cloud_client.runtime_get(id)}")
+
+                    json_response({ :id => id, **request_body }, 201)
+                rescue JSON::ParserError => e
+                    @logger.error("Invalid JSON: #{e.message}")
+                    halt 400, json_response({ :message => 'Invalid JSON data' })
+                end
+            end
+
+            get '/serverless-runtimes/:id' do
+                id = params[:id].to_i
+                runtime = @cloud_client.runtime_get(id)
+
+                if runtime
+                    @logger.info("#{RETURN_CODE}: 200")
+                    @logger.info("Response Body: #{runtime}")
+
+                    json_response(runtime)
+                else
+                    @logger.error("#{RETURN_CODE}: 404")
+                    @logger.error(NOT_FOUND)
+
+                    halt 404, json_response({ :message => NOT_FOUND })
+                end
+            end
+
+            put '/serverless-runtimes/:id' do
+                id = params[:id].to_i
+                runtime = @cloud_client.runtime_get(id)
+
+                if runtime
+                    begin
+                        request_body = JSON.parse(request.body.read)
+                        @cloud_client.runtime_update(id, request_body)
+
+                        @logger.info("#{RETURN_CODE}: 200")
+                        @logger.info("Response Body: #{cloud_client.runtime_get(id)}")
+
+                        json_response({ :id => id, **request_body })
+                    rescue JSON::ParserError => e
+                        @logger.error("Invalid JSON: #{e.message}")
+                        halt 400, json_response({ :message => 'Invalid JSON data' })
+                    end
+                else
+                    @logger.error("#{RETURN_CODE}: 404")
+                    @logger.error(NOT_FOUND)
+
+                    halt 404, json_response({ :message => NOT_FOUND })
+                end
+            end
+
+            delete '/serverless-runtimes/:id' do
+                id = params[:id].to_i
+                runtime = @cloud_client.runtime_get(id)
+
+                if runtime
+                    @cloud_client.runtime_delete(id)
+
+                    @logger.info("#{RETURN_CODE}: 204")
+
+                    status 204
+                else
+                    @logger.error("#{RETURN_CODE}: 404")
+                    @logger.error(NOT_FOUND)
+
+                    halt 404, json_response({ :message => NOT_FOUND })
+                end
+            end
+        end
+
+        def run_server
+            set :bind, @config[:host]
+            set :port, @config[:port]
+            run!
+        end
 
         # Helper method to return JSON responses
         def json_response(data, status = 200)

@@ -34,8 +34,13 @@ $LOAD_PATH.unshift(parent_directory)
 # Engine Modules
 require 'log'
 require 'configuration'
-require 'faas'
+
+require 'runtime'
+require 'data'
+require 'function'
+
 require 'client'
+
 require 'api'
 
 module ProvisionEngine
@@ -50,12 +55,12 @@ module ProvisionEngine
 
             @logger = Logger.new(@conf)
             @client = CloudClient.new(@conf, @logger)
-            @api = API.start(@conf, @client)
+            @api = API.new(@conf, @client)
         end
 
         def stop
             @logger.info('Stopping Provision Engine')
-            @api.stop
+            @api.kill
         end
 
     end
