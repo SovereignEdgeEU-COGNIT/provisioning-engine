@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # -------------------------------------------------------------------------- #
 # Copyright 2023, OpenNebula Project, OpenNebula Systems                     #
 #                                                                            #
@@ -14,24 +16,40 @@
 # limitations under the License.                                             #
 #--------------------------------------------------------------------------- #
 
-require_relative '../log'
+install() {
+	[ -d "$CONF_DIR" ] || sudo mkdir "$CONF_DIR"
+	[ -L "$CONF_PATH" ] || sudo ln -s "share/etc/$CONF_FILE" "$CONF_DIR"
+	[ -d "$install_dir" ] || mkdir "$install_dir"
 
-# Example usage:
-logger = ProvisionEngine::Logger.new
+	[ -L "$EXEC_FILE" ] || sudo ln -s "src/engine.rb" "$EXEC_FILE" && chmod +x "$EXEC_FILE"
 
-# Received REST API Calls
-logger.info('Received REST API Call: /api/some_endpoint')
+	for file in $SRC; do
+		dst="$install_dir/${file}"
 
-# Successful execution of API call
-response_code = 200
-if response_code == 200
-    logger.info('API call executed successfully: /api/some_endpoint')
+		[ -L "$dst" ] || ln -s "$(realpath "src/${file}")" "${install_dir}/"
+	done
+}
+
+clean() {
+	echo "${CONF_DIR} and ${install_dir} will not be deleted as part of the cleanup process"
+
+	[ -L $CONF_PATH ] && sudo rm $CONF_PATH
+	[ -d "$install_dir" ] && rm "${install_dir}"/*
+}
+
+CONF_DIR="/etc/one"
+CONF_FILE="provision_engine.conf"
+CONF_PATH="${CONF_DIR}/${CONF_FILE}"
+EXEC_FILE="/usr/bin/opengine"
+
+SRC="log.rb configuration.rb API/rest.rb CloudClient/client.rb"
+SRC="${SRC} Translator/data.rb Translator/function.rb Translator/runtime.rb"
+
+action="${1:-"install"}"
+install_dir="${2:-"/opt/ProvisionEngine"}"
+
+if [ "$action" = "clean" ]; then
+	clean
 else
-    logger.error("API call failed. Response code: #{response_code}. Cause: Invalid input data.")
-end
-
-# Service Initialization
-logger.info('Service initialized successfully')
-
-# Loading configuration files
-logger.debug('Loading configuration file: config.yml')
+	install
+fi
