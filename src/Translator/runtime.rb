@@ -1,15 +1,13 @@
-require 'json'
-
-module OpenNebula
+module ProvisionEngine
 
     # Serverless runtime class as wrapper of DocumentJSON
-    class FaaS < DocumentJSON
+    class ServerlessRuntime < OpenNebula::DocumentJSON
 
         DOCUMENT_TYPE = 1337
 
         def allocate(template)
             template = JSON.parse(template)
-            FaaS.validate(template)
+            FaaS.valid_definition?(template)
 
             template['registration_time'] = Integer(Time.now)
 
@@ -17,7 +15,11 @@ module OpenNebula
         end
 
         # Ensures the submitted template is valid
-        def self.validate(template); end
+        def self.valid_definition?(template)
+            return false unless template
+
+            true
+        end
 
     end
 

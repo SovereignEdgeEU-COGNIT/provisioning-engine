@@ -1,7 +1,5 @@
 require 'opennebula'
 require 'opennebula/oneflow_client'
-require_relative 'configuration'
-require_relative 'faas'
 
 module ProvisionEngine
 
@@ -19,6 +17,27 @@ module ProvisionEngine
             log_init
         end
 
+        def runtime_get(id)
+            ServerlessRuntime.new_with_id(id, @client_oned)
+        end
+
+        def runtime_create(template)
+            xml = ServerlessRuntime.build_xml
+            runtime = ServerlessRuntime.new(xml, @client_oned)
+
+            runtime.allocate(template)
+        end
+
+        def runtime_update(id, template, options = { :append => false })
+            runtime = ServerlessRuntime.get(id, @client_oned)
+            runtime.update(id, template, options[:append])
+        end
+
+        def runtime_delete(id)
+            runtime = ServerlessRuntime.get(id)
+            runtime.delete(id)
+        end
+
         def vm_get(id)
             OpenNebula::VirtualMachine.new_with_id(id, @client_oned)
         end
@@ -31,27 +50,6 @@ module ProvisionEngine
         def vm_terminate(id, options = { :hard => false })
             vm = vm_get(id)
             vm.terminate(options[:hard])
-        end
-
-        def function_get(id)
-            OpenNebula::FaaS.new_with_id(id, @client_oned)
-        end
-
-        def function_create(template)
-            xml = OpenNebula::FaaS.build_xml
-            faas = OpenNebula::FaaS.new(xml, @client_oned)
-
-            faas.allocate(template)
-        end
-
-        def function_update(id, template, options = { :append => false })
-            faas = Function.get(id, @client_oned)
-            faas.update(id, template, options[:append])
-        end
-
-        def function_delete(id)
-            faas = Function.get(id)
-            faas.delete(id)
         end
 
         def service_get(id)
