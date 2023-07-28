@@ -2,9 +2,9 @@
 
 Provisioning Engine acts as a entry point for the Device Runtime, instructs the Cloud-Edge Manager to spawn new FaaS/DaaS Runtimes and returns the endpoint back to the device. Afterwards, manages the lifetime of the FaaS/DaaS Runtimes
 
-## Install
+## Installation
 
-Executte `./install`. The installer will take care of
+Executte `./install.sh`. The installer will take care of
 
 - installing the required dependencies
 - distributing the default configuration
@@ -58,7 +58,7 @@ I, [2023-07-27 23:20:28 #2516]  INFO -- : Using oneflow at http://localhost:2474
 
 ## Uninstall
 
-Execute `install clean`. It will only remove the distributed files. Dependencies and created directories will remain.
+Execute `./install.sh clean`. It will only remove the distributed files. Dependencies and created directories will remain.
 
 ## Development
 

@@ -48,9 +48,6 @@ conf = ProvisionEngine::Configuration.new
 
 case ARGV[0]
 when 'start'
-    ############################################################################
-    # Load Engine Configuration
-    ############################################################################
     logger = ProvisionEngine::Logger.new(conf[:log])
 
     logger.info "Using oned at #{conf[:one_xmlrpc]}"
