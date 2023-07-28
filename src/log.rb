@@ -1,19 +1,3 @@
-# -------------------------------------------------------------------------- #
-# Copyright 2023, OpenNebula Project, OpenNebula Systems                     #
-#                                                                            #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may    #
-# not use this file except in compliance with the License. You may obtain    #
-# a copy of the License at                                                   #
-#                                                                            #
-# http://www.apache.org/licenses/LICENSE-2.0                                 #
-#                                                                            #
-# Unless required by applicable law or agreed to in writing, software        #
-# distributed under the License is distributed on an "AS IS" BASIS,          #
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   #
-# See the License for the specific language governing permissions and        #
-# limitations under the License.                                             #
-#--------------------------------------------------------------------------- #
-
 require 'logger'
 require 'fileutils'
 require 'syslog'
@@ -23,11 +7,10 @@ module ProvisionEngine
     #
     # Logging system for the provision engine components
     #
-    # TODO: Log rotation
     class Logger
 
         # Directory that holds component logs
-        LOGS = '/var/log/one/provisionengine'
+        LOGS = '/var/log/provision-engine'
         # Mapping of log levels to their corresponding methods in each logging system
         LOG_LEVEL_METHODS = {
             'file' => {
@@ -44,6 +27,7 @@ module ProvisionEngine
         #
         def initialize(config, component = 'engine')
             @component = component
+
             @system = config[:system] || 'file'
 
             case @system
@@ -59,7 +43,6 @@ module ProvisionEngine
             end
 
             define_log_level_methods
-
             info("Initializing Provision Engine component: #{component}")
         end
 
@@ -69,8 +52,11 @@ module ProvisionEngine
             FileUtils.mkdir_p(LOGS) unless Dir.exist?(LOGS)
             file = File.join(LOGS, "#{@component}.log")
 
-            @logger = Logger.new(file)
-            @logger.level = level || Logger::INFO
+            # log rotation
+            FileUtils.mv(file, "#{file}.#{Time.now.to_i}") if File.exist?(file)
+
+            @logger = ::Logger.new(file)
+            @logger.level = level || ::Logger::INFO
             @logger.datetime_format = '%Y-%m-%d %H:%M:%S'
         end
 
@@ -83,7 +69,7 @@ module ProvisionEngine
         #
         def define_log_level_methods
             LOG_LEVEL_METHODS[@system].each do |level, method_name|
-                define_method(level) do |message|
+                define_singleton_method(level) do |message|
                     if @system == 'file'
                         @logger.send(method_name, message)
                     elsif @system == 'syslog'
@@ -91,8 +77,6 @@ module ProvisionEngine
                     end
                 end
             end
-
-            alias_method :log, :info
         end
 
     end

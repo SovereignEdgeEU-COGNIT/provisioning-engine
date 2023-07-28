@@ -1,143 +1,194 @@
-# -------------------------------------------------------------------------- #
-# Copyright 2023, OpenNebula Project, OpenNebula Systems                     #
-#                                                                            #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may    #
-# not use this file except in compliance with the License. You may obtain    #
-# a copy of the License at                                                   #
-#                                                                            #
-# http://www.apache.org/licenses/LICENSE-2.0                                 #
-#                                                                            #
-# Unless required by applicable law or agreed to in writing, software        #
-# distributed under the License is distributed on an "AS IS" BASIS,          #
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   #
-# See the License for the specific language governing permissions and        #
-# limitations under the License.                                             #
-#--------------------------------------------------------------------------- #
+#!/usr/bin/env ruby
 
-require 'sinatra'
+############################################################################
+# Environment Configuration
+############################################################################
+ONE_LOCATION = ENV['ONE_LOCATION']
+
+if !ONE_LOCATION
+    RUBY_LIB_LOCATION = '/usr/lib/one/ruby'
+    GEMS_LOCATION     = '/usr/share/one/gems'
+else
+    RUBY_LIB_LOCATION = ONE_LOCATION + '/lib/ruby'
+    GEMS_LOCATION     = ONE_LOCATION + '/share/gems'
+end
+
+if File.directory?(GEMS_LOCATION)
+    real_gems_path = File.realpath(GEMS_LOCATION)
+    if !defined?(Gem) || Gem.path != [real_gems_path]
+        $LOAD_PATH.reject! {|l| l =~ /vendor_ruby/ }
+        require 'rubygems'
+        Gem.use_paths(real_gems_path)
+    end
+end
+
+$LOAD_PATH << RUBY_LIB_LOCATION
+# TODO: Decide install location. Customizable on the installer at the moment. Default value.
+$LOAD_PATH << '/opt/provision-engine/'
+
+# Shared Libraries for Modules
 require 'json'
+require 'yaml'
+require 'base64'
+require 'sinatra'
 
-module ProvisionEngine
+# OpenNebula Libraries
+require 'opennebula'
+require 'opennebula/oneflow_client'
 
-    class API
+# Engine Modules
+require 'log'
+require 'configuration'
+require 'client'
+require 'runtime'
+require 'data'
+require 'function'
 
-        RETURN_CODE = 'Response HTTP Return Code'.freeze
-        NOT_FOUND = 'Serverless Runtime not found'.freeze
+conf = ProvisionEngine::Configuration.new
 
-        def initialize(config, cloud_client)
-            @config = config
-            @cloud_client = cloud_client
-            setup_logger
-            setup_routes
-            run_server
-        end
+case ARGV[0]
+when 'start'
+    ############################################################################
+    # Load Engine Configuration
+    ############################################################################
+    logger = ProvisionEngine::Logger.new(conf[:log])
 
-        def kill
-            @logger.info("Killing API pid #{Process.pid}")
-            Process.kill('INT', Process.pid)
-        end
+    logger.info "Using oned at #{conf[:one_xmlrpc]}"
+    logger.info "Using oneflow at #{conf[:oneflow_server]}"
 
-        private
+    ############################################################################
+    # Define API Helpers
+    ############################################################################
 
-        def setup_logger
-            @logger = Logger.new(@config[:log], 'api')
+    RETURN_CODE = 'Response HTTP Return Code'.freeze
+    NOT_FOUND = 'Serverless Runtime not found'.freeze
 
-            # Log API Calls
-            before do
-                @logger.info("API Call: #{request.request_method} #{request.fullpath}")
-            end
-        end
-
-        def setup_routes
-            post '/serverless-runtimes' do
-                begin
-                    request_body = JSON.parse(request.body.read)
-                    id = @cloud_client.runtime_create(request_body)
-
-                    @logger.info("#{RETURN_CODE}: 201")
-                    @logger.info("Response Body: #{cloud_client.runtime_get(id)}")
-
-                    json_response({ :id => id, **request_body }, 201)
-                rescue JSON::ParserError => e
-                    @logger.error("Invalid JSON: #{e.message}")
-                    halt 400, json_response({ :message => 'Invalid JSON data' })
-                end
-            end
-
-            get '/serverless-runtimes/:id' do
-                id = params[:id].to_i
-                runtime = @cloud_client.runtime_get(id)
-
-                if runtime
-                    @logger.info("#{RETURN_CODE}: 200")
-                    @logger.info("Response Body: #{runtime}")
-
-                    json_response(runtime)
-                else
-                    @logger.error("#{RETURN_CODE}: 404")
-                    @logger.error(NOT_FOUND)
-
-                    halt 404, json_response({ :message => NOT_FOUND })
-                end
-            end
-
-            put '/serverless-runtimes/:id' do
-                id = params[:id].to_i
-                runtime = @cloud_client.runtime_get(id)
-
-                if runtime
-                    begin
-                        request_body = JSON.parse(request.body.read)
-                        @cloud_client.runtime_update(id, request_body)
-
-                        @logger.info("#{RETURN_CODE}: 200")
-                        @logger.info("Response Body: #{cloud_client.runtime_get(id)}")
-
-                        json_response({ :id => id, **request_body })
-                    rescue JSON::ParserError => e
-                        @logger.error("Invalid JSON: #{e.message}")
-                        halt 400, json_response({ :message => 'Invalid JSON data' })
-                    end
-                else
-                    @logger.error("#{RETURN_CODE}: 404")
-                    @logger.error(NOT_FOUND)
-
-                    halt 404, json_response({ :message => NOT_FOUND })
-                end
-            end
-
-            delete '/serverless-runtimes/:id' do
-                id = params[:id].to_i
-                runtime = @cloud_client.runtime_get(id)
-
-                if runtime
-                    @cloud_client.runtime_delete(id)
-
-                    @logger.info("#{RETURN_CODE}: 204")
-
-                    status 204
-                else
-                    @logger.error("#{RETURN_CODE}: 404")
-                    @logger.error(NOT_FOUND)
-
-                    halt 404, json_response({ :message => NOT_FOUND })
-                end
-            end
-        end
-
-        def run_server
-            set :bind, @config[:host]
-            set :port, @config[:port]
-            run!
-        end
-
-        # Helper method to return JSON responses
-        def json_response(data, status = 200)
-            content_type :json
-            status status
-            data.to_json
-        end
-
+    # Helper method to return JSON responses
+    def json_response(data, status = 200)
+        content_type :json
+        status status
+        data.to_json
     end
 
+    def auth?(request)
+        auth_header = request.env['HTTP_AUTHORIZATION']
+
+        if auth_header.nil?
+            logger.error("#{RETURN_CODE}: 401")
+            halt 401, json_response({ :message => 'Authentication required' })
+        end
+
+        if auth_header.start_with?('Basic ')
+            encoded_credentials = auth_header.split(' ')[1]
+            username, password = Base64.decode64(encoded_credentials).split(':')
+        else
+            logger.error("#{RETURN_CODE}: 401")
+            halt 401, json_response({ :message => 'Unsupported authentication scheme' })
+        end
+
+        "#{username}:#{password}"
+    end
+
+    ############################################################################
+    # API configuration
+    ############################################################################
+
+    set :bind, conf[:host]
+    set :port, conf[:port]
+
+    ############################################################################
+    # Routes setup
+    ############################################################################
+
+    # Log every HTTP Request received
+    before do
+        logger.info("API Call: #{request.request_method} #{request.fullpath}")
+    end
+
+    post '/serverless-runtimes' do
+        begin
+            request_body = JSON.parse(request.body.read)
+            id = @cloud_client.runtime_create(request_body)
+
+            logger.info("#{RETURN_CODE}: 201")
+            logger.info("Response Body: #{cloud_client.runtime_get(id)}")
+
+            json_response({ :id => id, **request_body }, 201)
+        rescue JSON::ParserError => e
+            logger.error("Invalid JSON: #{e.message}")
+            halt 400, json_response({ :message => 'Invalid JSON data' })
+        end
+    end
+
+    get '/serverless-runtimes/:id' do
+        auth = auth?(request)
+
+        id = params[:id].to_i
+        runtime = ProvisionEngine::CloudClient.new(settings.conf, auth).runtime_get(id)
+
+        if runtime
+            logger.info("#{RETURN_CODE}: 200")
+            logger.info("Response Body: #{runtime}")
+
+            json_response(runtime)
+        else
+            logger.error("#{RETURN_CODE}: 404")
+            logger.error(NOT_FOUND)
+
+            halt 404, json_response({ :message => NOT_FOUND })
+        end
+    end
+
+    put '/serverless-runtimes/:id' do
+        id = params[:id].to_i
+        runtime = @cloud_client.runtime_get(id)
+
+        if runtime
+            begin
+                request_body = JSON.parse(request.body.read)
+                @cloud_client.runtime_update(id, request_body)
+
+                logger.info("#{RETURN_CODE}: 200")
+                logger.info("Response Body: #{cloud_client.runtime_get(id)}")
+
+                json_response({ :id => id, **request_body })
+            rescue JSON::ParserError => e
+                logger.error("Invalid JSON: #{e.message}")
+                halt 400, json_response({ :message => 'Invalid JSON data' })
+            end
+        else
+            logger.error("#{RETURN_CODE}: 404")
+            logger.error(NOT_FOUND)
+
+            halt 404, json_response({ :message => NOT_FOUND })
+        end
+    end
+
+    delete '/serverless-runtimes/:id' do
+        id = params[:id].to_i
+        runtime = @cloud_client.runtime_get(id)
+
+        if runtime
+            @cloud_client.runtime_delete(id)
+
+            logger.info("#{RETURN_CODE}: 204")
+
+            status 204
+        else
+            logger.error("#{RETURN_CODE}: 404")
+            logger.error(NOT_FOUND)
+
+            halt 404, json_response({ :message => NOT_FOUND })
+        end
+    end
+
+when 'stop'
+    process_name = 'provision-engine'
+    pid = `pidof #{process_name}`.to_i
+
+    # TODO: reuse log file
+    puts('Stopping Provision Engine')
+    Process.kill('INT', pid)
+else
+    STDERR.puts('Unknown engine control')
 end
