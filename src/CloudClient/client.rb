@@ -1,22 +1,3 @@
-# -------------------------------------------------------------------------- #
-# Copyright 2023, OpenNebula Project, OpenNebula Systems                     #
-#                                                                            #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may    #
-# not use this file except in compliance with the License. You may obtain    #
-# a copy of the License at                                                   #
-#                                                                            #
-# http://www.apache.org/licenses/LICENSE-2.0                                 #
-#                                                                            #
-# Unless required by applicable law or agreed to in writing, software        #
-# distributed under the License is distributed on an "AS IS" BASIS,          #
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.   #
-# See the License for the specific language governing permissions and        #
-# limitations under the License.                                             #
-#--------------------------------------------------------------------------- #
-
-require 'opennebula'
-require 'opennebula/oneflow_client'
-
 module ProvisionEngine
 
     #
@@ -24,13 +5,9 @@ module ProvisionEngine
     #
     class CloudClient
 
-        def initialize(credentials)
-            @conf = ProvisionEngine::Configuration.new
-
-            @client_oned = client_oned(credentials)
-            @client_flow = client_flow(credentials)
-
-            log_init
+        def initialize(conf, auth)
+            @client_oned = client_oned(conf[:one_xmlrpc], auth)
+            @client_oned = client_oneflow(conf[:oneflow_server], auth)
         end
 
         def runtime_get(id)
@@ -131,24 +108,17 @@ module ProvisionEngine
             @client.post(url, body)
         end
 
-        def client_oned(credentials)
+        def client_oned(endpoint, auth)
             options = {
-                :url => @conf[:oneflow_server],
-                :username => credentials.split(':')[0],
-                :password => credentials.split(':')[-1]
+                :url => endpoint,
+                :username => auth.split(':')[0],
+                :password => auth.split(':')[-1]
             }
             Service::Client.new(options)
         end
 
-        def client_flow(credentials)
-            OpenNebula::Client.new(credentials, @conf[:one_xmlrpc])
-        end
-
-        def log_init
-            return unless @conf[:log][:level] > 1
-
-            puts "Using oned at #{@conf[:one_xmlrpc]}"
-            puts "Using oneflow at #{@conf[:oneflow_server]}"
+        def client_flow(endpoint, auth)
+            OpenNebula::Client.new(endpoint, auth)
         end
 
     end
