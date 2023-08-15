@@ -1,0 +1,29 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "NAME": "Name",
+    "ID": 69, 
+    "SERVICE_ID": 69,
+    "FAAS": {
+      "CPU": 1,
+      "MEMORY": 128,
+      "DISK_SIZE": 1024,
+      "FLAVOUR": "nature",
+      "ENDPOINT": "localhost:2474",
+      "STATE": "RUNNING",
+      "VM_ID": 69
+    },
+    "DAAS": {
+      "CPU": 1,
+      "MEMORY": 128,
+      "DISK_SIZE": 1024,
+      "FLAVOUR": "nature",
+      "ENDPOINT": "localhost:2474",
+      "STATE": "RUNNING",
+      "VM_ID": 70
+    },
+    "SCHEDULING": {
+    },
+    "DEVICE_INFO": {
+    }
+  }
+}

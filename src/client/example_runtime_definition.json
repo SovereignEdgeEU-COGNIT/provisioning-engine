@@ -1,0 +1,21 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "NAME": "Name",
+    "FAAS": {
+      "CPU": 1,
+      "MEMORY": 128,
+      "DISK_SIZE": 1024,
+      "FLAVOUR": "nature",
+      "ENDPOINT": "localhost:2474"
+    },
+    "DAAS": {
+      "CPU": 1,
+      "MEMORY": 128,
+      "DISK_SIZE": 1024,
+      "FLAVOUR": "nature",
+      "ENDPOINT": "localhost:2474"
+    },
+    "SCHEDULING": {},
+    "DEVICE_INFO": {}
+  }
+}

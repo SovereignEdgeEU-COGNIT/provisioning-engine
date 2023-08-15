@@ -8,7 +8,7 @@ install() {
 
 	[ -d "$CONF_DIR" ] || sudo mkdir "$CONF_DIR"
 	[ -L "$CONF_PATH" ] || sudo ln -s "$(realpath "share/etc/$CONF_FILE")" "$CONF_DIR"
-	[ -d "$install_dir" ] || sudomkdir "$install_dir"
+	[ -d "$install_dir" ] || sudo mkdir "$install_dir"
 
 	[ -L "$EXEC_FILE" ] || sudo ln -s "${install_dir}/rest.rb" "$EXEC_FILE"
 
