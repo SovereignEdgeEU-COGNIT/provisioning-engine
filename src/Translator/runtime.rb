@@ -21,6 +21,9 @@ module ProvisionEngine
             true
         end
 
+        # Updates the document xml with instatianted service information
+        def add_service(service_json); end
+
     end
 
 end
