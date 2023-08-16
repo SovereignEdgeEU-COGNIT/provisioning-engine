@@ -1,29 +1,47 @@
 {
-  "SERVERLESS_RUNTIME": {
-    "NAME": "Name",
-    "ID": 69, 
-    "SERVICE_ID": 69,
-    "FAAS": {
-      "CPU": 1,
-      "MEMORY": 128,
-      "DISK_SIZE": 1024,
-      "FLAVOUR": "nature",
-      "ENDPOINT": "localhost:2474",
-      "STATE": "RUNNING",
-      "VM_ID": 69
+  "DOCUMENT": {
+    "TEMPLATE": {
+      "BODY": {
+        "SERVICE_ID": 69,
+        "FAAS": {
+          "CPU": 1,
+          "MEMORY": 128,
+          "DISK_SIZE": 1024,
+          "FLAVOUR": "nature",
+          "ENDPOINT": "localhost:2474",
+          "STATE": "RUNNING",
+          "VM_ID": 69
+        },
+        "DAAS": {
+          "CPU": 1,
+          "MEMORY": 128,
+          "DISK_SIZE": 1024,
+          "FLAVOUR": "nature",
+          "ENDPOINT": "localhost:2474",
+          "STATE": "RUNNING",
+          "VM_ID": 70
+        },
+        "SCHEDULING": {},
+        "DEVICE_INFO": {}
+      }
     },
-    "DAAS": {
-      "CPU": 1,
-      "MEMORY": 128,
-      "DISK_SIZE": 1024,
-      "FLAVOUR": "nature",
-      "ENDPOINT": "localhost:2474",
-      "STATE": "RUNNING",
-      "VM_ID": 70
-    },
-    "SCHEDULING": {
-    },
-    "DEVICE_INFO": {
+    "ID": "0",
+    "NAME": "Runtime0",
+    "TYPE": "1337",
+    "UID": "0",
+    "GID": "0",
+    "UNAME": "oneadmin",
+    "GNAME": "oneadmin",
+    "PERMISSIONS": {
+      "OWNER_A": "0",
+      "OWNER_M": "1",
+      "OWNER_U": "1",
+      "OTHER_A": "0",
+      "OTHER_M": "0",
+      "OTHER_U": "0",
+      "GROUP_A": "0",
+      "GROUP_M": "0",
+      "GROUP_U": "0"
     }
   }
 }
