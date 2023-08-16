@@ -57,30 +57,35 @@ when 'start'
     # Define API Helpers
     ############################################################################
 
-    RETURN_CODE = 'Response HTTP Return Code'.freeze
-    NOT_FOUND = 'Serverless Runtime not found'.freeze
+    RC = 'Response HTTP Return Code'.freeze
+    RB = 'Response Body'.freeze
+    SR = 'Serverless Runtime'.freeze
+    DENIED = 'Permission denied'.freeze
+    SR_INVALID = "Invalid #{SR} defition".freeze
+    SR_NOT_FOUND = "#{SR} not found".freeze
+    SR_FAIL = "Failed to create #{SR}".freeze
 
     # Helper method to return JSON responses
-    def json_response(data, status = 200)
+    def json_response(data, status)
         content_type :json
         status status
-        data.to_json
+        data.is_a?(String) ? data : data.to_json
     end
 
     def auth?(request)
         auth_header = request.env['HTTP_AUTHORIZATION']
 
         if auth_header.nil?
-            logger.error("#{RETURN_CODE}: 401")
-            halt 401, json_response({ :message => 'Authentication required' })
+            logger.error("#{RC}: 401")
+            halt 401, json_response({ :message => 'Authentication required' }, 401)
         end
 
         if auth_header.start_with?('Basic ')
             encoded_credentials = auth_header.split(' ')[1]
             username, password = Base64.decode64(encoded_credentials).split(':')
         else
-            logger.error("#{RETURN_CODE}: 401")
-            halt 401, json_response({ :message => 'Unsupported authentication scheme' })
+            logger.error("#{RC}: 401")
+            halt 401, json_response({ :message => 'Unsupported authentication scheme' }, 401)
         end
 
         "#{username}:#{password}"
@@ -103,36 +108,71 @@ when 'start'
     end
 
     post '/serverless-runtimes' do
+        auth = auth?(request)
+
         begin
             request_body = JSON.parse(request.body.read)
-            id = @cloud_client.runtime_create(request_body)
-
-            logger.info("#{RETURN_CODE}: 201")
-            logger.info("Response Body: #{cloud_client.runtime_get(id)}")
-
-            json_response({ :id => id, **request_body }, 201)
         rescue JSON::ParserError => e
             logger.error("Invalid JSON: #{e.message}")
             halt 400, json_response({ :message => 'Invalid JSON data' })
         end
+
+        client = ProvisionEngine::CloudClient.new(conf, auth)
+
+        # creation = client.runtime_create(request_body)
+
+        require 'net/http'
+        require 'uri'
+
+        uri = URI.parse('http://127.0.0.1:1339/service_template/0')
+        http = Net::HTTP.new(uri.host, uri.port)
+
+        request = Net::HTTP::Get.new(uri.request_uri)
+        request.basic_auth('oneadmin', 'opennebula')
+
+        response = http.request(request)
+        json_response(response.body, response.code)
+
+        # case creation[0]
+        # when 0
+        #     response = creation[1]
+
+        #     logger.info("#{RC}: 201")
+        #     logger.info("Serverless Runtime created: #{response}")
+
+        #     json_response(response, 201)
+        # when 400
+        #     logger.error("#{RC}: 400")
+        #     logger.error("#{SR_INVALID}: #{response}")
+        #     halt 400, json_response({ :message => SR_INVALID }, 400)
+        # when 403
+        #     logger.error("#{RC}: 403")
+        #     logger.error("#{DENIED}: #{response}")
+        #     halt 403, json_response({ :message => DENIED }, 403)
+        # else
+        #     logger.error("#{RC}: 500")
+        #     logger.error("#{SR_FAIL}: #{response}")
+        #     halt 500, json_response({ :message => SR_FAIL }, 500)
+        # end
     end
 
     get '/serverless-runtimes/:id' do
         auth = auth?(request)
 
         id = params[:id].to_i
-        runtime = ProvisionEngine::CloudClient.new(settings.conf, auth).runtime_get(id)
+        client = ProvisionEngine::CloudClient.new(conf, auth)
+        runtime = client.runtime_get(id)
 
         if runtime
-            logger.info("#{RETURN_CODE}: 200")
-            logger.info("Response Body: #{runtime}")
+            logger.info("#{RC}: 200")
+            logger.info("#{RB}: #{runtime}")
 
             json_response(runtime)
         else
-            logger.error("#{RETURN_CODE}: 404")
-            logger.error(NOT_FOUND)
+            logger.error("#{RC}: 404")
+            logger.error(SR_NOT_FOUND)
 
-            halt 404, json_response({ :message => NOT_FOUND })
+            halt 404, json_response({ :message => SR_NOT_FOUND })
         end
     end
 
@@ -145,8 +185,8 @@ when 'start'
                 request_body = JSON.parse(request.body.read)
                 @cloud_client.runtime_update(id, request_body)
 
-                logger.info("#{RETURN_CODE}: 200")
-                logger.info("Response Body: #{cloud_client.runtime_get(id)}")
+                logger.info("#{RC}: 200")
+                logger.info("#{RB}: #{cloud_client.runtime_get(id)}")
 
                 json_response({ :id => id, **request_body })
             rescue JSON::ParserError => e
@@ -154,10 +194,10 @@ when 'start'
                 halt 400, json_response({ :message => 'Invalid JSON data' })
             end
         else
-            logger.error("#{RETURN_CODE}: 404")
-            logger.error(NOT_FOUND)
+            logger.error("#{RC}: 404")
+            logger.error(SR_NOT_FOUND)
 
-            halt 404, json_response({ :message => NOT_FOUND })
+            halt 404, json_response({ :message => SR_NOT_FOUND })
         end
     end
 
@@ -168,14 +208,14 @@ when 'start'
         if runtime
             @cloud_client.runtime_delete(id)
 
-            logger.info("#{RETURN_CODE}: 204")
+            logger.info("#{RC}: 204")
 
             status 204
         else
-            logger.error("#{RETURN_CODE}: 404")
-            logger.error(NOT_FOUND)
+            logger.error("#{RC}: 404")
+            logger.error(SR_NOT_FOUND)
 
-            halt 404, json_response({ :message => NOT_FOUND })
+            halt 404, json_response({ :message => SR_NOT_FOUND })
         end
     end
 

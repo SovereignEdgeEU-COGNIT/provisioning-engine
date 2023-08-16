@@ -6,8 +6,8 @@ module ProvisionEngine
     class CloudClient
 
         def initialize(conf, auth)
-            @client_oned = client_oned(conf[:one_xmlrpc], auth)
-            @client_oned = client_oneflow(conf[:oneflow_server], auth)
+            create_client_oned(auth, conf[:one_xmlrpc])
+            create_client_oneflow(auth, conf[:oneflow_server])
         end
 
         def runtime_get(id)
@@ -17,8 +17,27 @@ module ProvisionEngine
         def runtime_create(template)
             xml = ServerlessRuntime.build_xml
             runtime = ServerlessRuntime.new(xml, @client_oned)
+            rc = runtime.allocate(template)
 
-            runtime.allocate(template)
+            if OpenNebula.is_error?(rc)
+                return [-1, rc.message]
+            end
+
+            # TODO: Map runtime specification to service_template_id and merge options
+            service_options = {}
+            service_template_id = 0
+
+            response = service_template_instantiate(service_template_id, service_options)
+
+            rc = response.code.to_i
+            rb = JSON.parse(response.body)
+
+            if rc != 201
+                return [rc, rb]
+            end
+
+            runtime.add_service(rb)
+            runtime
         end
 
         def runtime_update(id, template, options = { :append => false })
@@ -108,17 +127,17 @@ module ProvisionEngine
             @client.post(url, body)
         end
 
-        def client_oned(endpoint, auth)
+        def create_client_oneflow(auth, endpoint)
             options = {
                 :url => endpoint,
                 :username => auth.split(':')[0],
                 :password => auth.split(':')[-1]
             }
-            Service::Client.new(options)
+            @client_oneflow = Service::Client.new(options)
         end
 
-        def client_flow(endpoint, auth)
-            OpenNebula::Client.new(endpoint, auth)
+        def create_client_oned(auth, endpoint)
+            @client_oned = OpenNebula::Client.new(auth, endpoint)
         end
 
     end
