@@ -72,7 +72,7 @@ when 'start'
         data.is_a?(String) ? data : data.to_json
     end
 
-    def auth?(request)
+    def auth?
         auth_header = request.env['HTTP_AUTHORIZATION']
 
         if auth_header.nil?
@@ -91,15 +91,13 @@ when 'start'
         "#{username}:#{password}"
     end
 
-    def json_valid?
+    def body_valid?
         begin
-            runtime_template = JSON.parse(request.body.read)
+            JSON.parse(request.body.read)
         rescue JSON::ParserError => e
             logger.error("Invalid JSON: #{e.message}")
             halt 400, json_response({ :message => 'Invalid JSON data' })
         end
-
-        runtime_template
     end
 
     ############################################################################
@@ -119,13 +117,12 @@ when 'start'
     end
 
     post '/serverless-runtimes' do
-        auth = auth?(request)
-
-        template = json_valid?(auth)
+        auth = auth?
+        specification = body_valid?
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
 
-        response = client.runtime_create(template)
+        response = client.runtime_create(specification)
         rc = response[0]
         content = response[1]
 
@@ -154,11 +151,11 @@ when 'start'
     end
 
     get '/serverless-runtimes/:id' do
-        auth = auth?(request)
-
-        id = params[:id].to_i
+        auth = auth?
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
+
+        id = params[:id].to_i
 
         response = client.runtime_get(id)
         rc = response[0]
@@ -189,32 +186,23 @@ when 'start'
     end
 
     put '/serverless-runtimes/:id' do
+        logger.error("#{RC}: 501")
+        logger.error("#{SR} update not implemented")
+
+        halt 501, json_response({ :message => "#{SR} update not implemented" }, 501)
+
+        auth = auth?
+        specification = body_valid?
+
+        client = ProvisionEngine::CloudClient.new(conf, auth)
+
         id = params[:id].to_i
-        runtime = @cloud_client.runtime_get(id)
 
-        if runtime
-            begin
-                request_body = JSON.parse(request.body.read)
-                @cloud_client.runtime_update(id, request_body)
-
-                logger.info("#{RC}: 200")
-                logger.info("#{RB}: #{cloud_client.runtime_get(id)}")
-
-                json_response({ :id => id, **request_body })
-            rescue JSON::ParserError => e
-                logger.error("Invalid JSON: #{e.message}")
-                halt 400, json_response({ :message => 'Invalid JSON data' })
-            end
-        else
-            logger.error("#{RC}: 404")
-            logger.error(SR_NOT_FOUND)
-
-            halt 404, json_response({ :message => SR_NOT_FOUND })
-        end
+        response = client.runtime_update(id, specification)
     end
 
     delete '/serverless-runtimes/:id' do
-        auth = auth?(request)
+        auth = auth?
 
         id = params[:id].to_i
 

@@ -5,48 +5,55 @@ module ProvisionEngine
 
         DOCUMENT_TYPE = 1337
 
-        def allocate(template_json)
-            template = JSON.parse(template_json)
+        # Service must have been created prior to allocating the document
+        def allocate(specification)
+            specification['registration_time'] = Integer(Time.now)
 
-            self.class.valid_definition?(template)
-
-            template['registration_time'] = Integer(Time.now)
-
-            super(template_json, template['name'])
+            super(specification.to_json, specification['NAME'])
         end
 
-        # TODO
-        # Ensures the submitted template is valid
-        def self.valid_definition?(template)
-            return false unless template
+        # TODO: Validate using SCHEMA
+        # Ensures the submitted template has the required information
+        def self.validate(template)
+            return false unless template.key?('FAAS')
+            return false unless template['FASS'].key?('FLAVOUR')
+
+            return false unless template.key?('DEVICE_INFO')
+            return false unless template.key?('LATENCY_TO_PE')
+            return false unless template.key?('GEOGRAPHIC_LOCATION')
 
             true
         end
 
         # Updates the document xml with instatianted service information
-        def add_service(service_json)
-            template['service_id'] = service_json['ID']
+        def add_service(service)
+            new_template = {}
 
-            roles = service_json['roles']
+            service_template = service['DOCUMENT']['TEMPLATE']['BODY']
+            new_template['SERVICE_ID'] = service['DOCUMENT']['ID']
+
+            roles = service_template['roles']
 
             add_xass('faas', roles[0])
             return unless roles[1]
 
             add_xass('daas', roles[1])
+
+            update(new_template)
         end
 
         def add_xass(xass, _role_info)
-            new_template = {}
+            xaas_template = {}
 
-            new_template['cpu']
-            new_template['memory']
-            new_template['disk_size']
-            new_template['flavour']
-            new_template['endpoint']
-            new_template['state']
-            new_template['vm_id']
+            xaas_template['cpu']
+            xaas_template['memory']
+            xaas_template['disk_size']
+            xaas_template['flavour']
+            xaas_template['endpoint']
+            xaas_template['state']
+            xaas_template['vm_id']
 
-            template[xass].merge(new_template)
+            xaas_template
         end
 
     end

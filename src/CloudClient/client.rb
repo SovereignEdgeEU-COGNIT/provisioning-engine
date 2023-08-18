@@ -5,7 +5,7 @@ module ProvisionEngine
     #
     class CloudClient
 
-        def self.map_error(xmlrpc_errno)
+        def self.map_error_oned(xmlrpc_errno)
             # ESUCCESS        = 0x0000
             # EAUTHENTICATION = 0x0100
             # EAUTHORIZATION  = 0x0200
@@ -23,7 +23,7 @@ module ProvisionEngine
             when OpenNebla::Error::ENO_EXISTS
                 404
             else
-                -1
+                xmlrpc_errno
             end
         end
 
@@ -45,18 +45,8 @@ module ProvisionEngine
             [0, runtime]
         end
 
-        def runtime_create(template)
-            xml = ServerlessRuntime.build_xml
-            runtime = ServerlessRuntime.new(xml, @client_oned)
-
-            rc = runtime.allocate(template)
-
-            if OpenNebula.is_error?(rc)
-                return [-1, rc.message]
-            end
-
-            response = runtime_template_to_service(template)
-
+        def runtime_create(specification)
+            response = runtime_specification_to_service(specification)
             rc = response.code.to_i
             rb = JSON.parse(response.body)
 
@@ -64,7 +54,28 @@ module ProvisionEngine
                 return [rc, rb]
             end
 
-            runtime.add_service(rb)
+            if true
+                runtime = { 'NAME' => 'Dummy Serverless Runtime' }
+                return [201, runtime]
+            end
+
+            service = rb
+
+            xml = ServerlessRuntime.build_xml
+            runtime = ServerlessRuntime.new(xml, @client_oned)
+
+            response = runtime.allocate(specification)
+
+            if OpenNebula.is_error?(response)
+                return [self.class.map_error_oned(response.errno), response.message]
+            end
+
+            runtime.info
+
+            service = service_get(service['DOCUMENT']['ID'])
+            runtime.add_service(service)
+
+            runtime.info
 
             [0, runtime]
         end
@@ -83,11 +94,8 @@ module ProvisionEngine
             end
 
             service_id = runtime.template['service_id']
-            service = service_get(service_id)
-            service_template_id = service['template_id']
 
             response = service_delete(service_id)
-
             rc = response.code.to_i
             rb = JSON.parse(response.body)
 
@@ -98,7 +106,7 @@ module ProvisionEngine
             response = runtime.delete
 
             if OpenNebula.is_error?(response)
-                return [self.class.map_error(response.errno), response.message]
+                return [self.class.map_error_oned(response.errno), response.message]
             end
 
             [0, '']
@@ -168,7 +176,12 @@ module ProvisionEngine
         private
 
         # Translates a runtime specification into a service instantiation
-        def runtime_template_to_service(runtime_template)
+        def runtime_specification_to_service(runtime_template)
+            if !ServerlessRuntime.validate(runtime_template)
+                message = 'Invalid Serverless Runtime specification'
+                return [400, message]
+            end
+
             mapping_rules = @conf[:mapping]
 
             # role0, mandatory
