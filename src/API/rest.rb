@@ -91,6 +91,17 @@ when 'start'
         "#{username}:#{password}"
     end
 
+    def json_valid?
+        begin
+            runtime_template = JSON.parse(request.body.read)
+        rescue JSON::ParserError => e
+            logger.error("Invalid JSON: #{e.message}")
+            halt 400, json_response({ :message => 'Invalid JSON data' })
+        end
+
+        runtime_template
+    end
+
     ############################################################################
     # API configuration
     ############################################################################
@@ -110,69 +121,70 @@ when 'start'
     post '/serverless-runtimes' do
         auth = auth?(request)
 
-        begin
-            request_body = JSON.parse(request.body.read)
-        rescue JSON::ParserError => e
-            logger.error("Invalid JSON: #{e.message}")
-            halt 400, json_response({ :message => 'Invalid JSON data' })
-        end
+        template = json_valid?(auth)
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
 
-        # creation = client.runtime_create(request_body)
+        response = client.runtime_create(template)
+        rc = response[0]
+        content = response[1]
 
-        require 'net/http'
-        require 'uri'
+        case rc
+        when 0
+            logger.info("#{RC}: 201")
+            logger.info("#{SR} created: #{content}")
 
-        uri = URI.parse('http://127.0.0.1:1339/service_template/0')
-        http = Net::HTTP.new(uri.host, uri.port)
+            json_response(content, 201)
+        when 400
+            logger.error("#{RC}: 400")
+            logger.error("#{SR_INVALID}: #{content}")
 
-        request = Net::HTTP::Get.new(uri.request_uri)
-        request.basic_auth('oneadmin', 'opennebula')
+            halt 400, json_response({ :message => SR_INVALID }, 400)
+        when 403
+            logger.error("#{RC}: 403")
+            logger.error("#{DENIED}: #{content}")
 
-        response = http.request(request)
-        json_response(response.body, response.code)
+            halt 403, json_response({ :message => DENIED }, 403)
+        else
+            logger.error("#{RC}: 500")
+            logger.error("#{SR_FAIL}: #{content}")
 
-        # case creation[0]
-        # when 0
-        #     response = creation[1]
-
-        #     logger.info("#{RC}: 201")
-        #     logger.info("Serverless Runtime created: #{response}")
-
-        #     json_response(response, 201)
-        # when 400
-        #     logger.error("#{RC}: 400")
-        #     logger.error("#{SR_INVALID}: #{response}")
-        #     halt 400, json_response({ :message => SR_INVALID }, 400)
-        # when 403
-        #     logger.error("#{RC}: 403")
-        #     logger.error("#{DENIED}: #{response}")
-        #     halt 403, json_response({ :message => DENIED }, 403)
-        # else
-        #     logger.error("#{RC}: 500")
-        #     logger.error("#{SR_FAIL}: #{response}")
-        #     halt 500, json_response({ :message => SR_FAIL }, 500)
-        # end
+            halt 500, json_response({ :message => SR_FAIL }, 500)
+        end
     end
 
     get '/serverless-runtimes/:id' do
         auth = auth?(request)
 
         id = params[:id].to_i
+
         client = ProvisionEngine::CloudClient.new(conf, auth)
-        runtime = client.runtime_get(id)
 
-        if runtime
+        response = client.runtime_get(id)
+        rc = response[0]
+        content = response[1]
+
+        case rc
+        when 0
             logger.info("#{RC}: 200")
-            logger.info("#{RB}: #{runtime}")
+            logger.info("#{SR}: #{content}")
 
-            json_response(runtime)
-        else
+            json_response(runtime, 200)
+        when 403
+            logger.error("#{RC}: 403")
+            logger.error("#{DENIED}: #{content}")
+
+            halt 403, json_response({ :message => DENIED }, 403)
+        when 404
             logger.error("#{RC}: 404")
-            logger.error(SR_NOT_FOUND)
+            logger.error("#{SR_NOT_FOUND}: #{content}")
 
-            halt 404, json_response({ :message => SR_NOT_FOUND })
+            halt 403, json_response({ :message => SR_NOT_FOUND }, 404)
+        else
+            logger.error("#{RC}: 500")
+            logger.error("#{SR_FAIL}: #{content}")
+
+            halt 500, json_response({ :message => SR_FAIL }, 500)
         end
     end
 
@@ -202,20 +214,37 @@ when 'start'
     end
 
     delete '/serverless-runtimes/:id' do
+        auth = auth?(request)
+
         id = params[:id].to_i
-        runtime = @cloud_client.runtime_get(id)
 
-        if runtime
-            @cloud_client.runtime_delete(id)
+        client = ProvisionEngine::CloudClient.new(conf, auth)
 
+        response = client.runtime_delete(id)
+        rc = response[0]
+        content = response[1]
+
+        case rc
+        when 0
             logger.info("#{RC}: 204")
+            logger.info("#{SR} deleted")
 
-            status 204
-        else
+            json_response(runtime, 204)
+        when 403
+            logger.error("#{RC}: 403")
+            logger.error("#{DENIED}: #{content}")
+
+            halt 403, json_response({ :message => DENIED }, 403)
+        when 404
             logger.error("#{RC}: 404")
-            logger.error(SR_NOT_FOUND)
+            logger.error("#{SR_NOT_FOUND}: #{content}")
 
-            halt 404, json_response({ :message => SR_NOT_FOUND })
+            halt 403, json_response({ :message => SR_NOT_FOUND }, 404)
+        else
+            logger.error("#{RC}: 500")
+            logger.error("#{SR_FAIL}: #{content}")
+
+            halt 500, json_response({ :message => SR_FAIL }, 500)
         end
     end
 
