@@ -1,19 +1,19 @@
 {
-  "NAME": "Name",
+  "NAME": "Example Serverless Runtime",
   "FAAS": {
     "CPU": 1,
     "MEMORY": 128,
     "DISK_SIZE": 1024,
-    "FLAVOUR": "nature",
-    "ENDPOINT": "localhost:2474"
+    "FLAVOUR": "nature"
   },
   "DAAS": {
     "CPU": 1,
     "MEMORY": 128,
     "DISK_SIZE": 1024,
-    "FLAVOUR": "nature",
-    "ENDPOINT": "localhost:2474"
+    "FLAVOUR": "nature-s3"
   },
   "SCHEDULING": {},
-  "DEVICE_INFO": {}
+  "DEVICE_INFO": {},
+  "LATENCY_TO_PE": 55,
+  "GEOGRAPHIC_LOCATION": "Somewhere"
 }
