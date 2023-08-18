@@ -5,18 +5,48 @@ module ProvisionEngine
     #
     class CloudClient
 
+        def self.map_error(xmlrpc_errno)
+            # ESUCCESS        = 0x0000
+            # EAUTHENTICATION = 0x0100
+            # EAUTHORIZATION  = 0x0200
+            # ENO_EXISTS      = 0x0400
+            # EACTION         = 0x0800
+            # EXML_RPC_API    = 0x1000
+            # EINTERNAL       = 0x2000
+            # EALLOCATE       = 0x4000
+            # ENOTDEFINED     = 0xF001
+            # EXML_RPC_CALL   = 0xF002
+
+            case xmlrpc_errno
+            when OpenNebla::EAUTHORIZATION
+                403
+            when OpenNebla::ENO_EXISTS
+                404
+            else
+                -1
+            end
+        end
+
         def initialize(conf, auth)
             create_client_oned(auth, conf[:one_xmlrpc])
             create_client_oneflow(auth, conf[:oneflow_server])
         end
 
         def runtime_get(id)
-            ServerlessRuntime.new_with_id(id, @client_oned)
+            runtime = ServerlessRuntime.new_with_id(id, @client_oned)
+            runtime.info
+
+            if runtime.name.nil?
+                return [404, 'Not found']
+            end
+
+            [0, runtime]
         end
 
         def runtime_create(template)
             xml = ServerlessRuntime.build_xml
             runtime = ServerlessRuntime.new(xml, @client_oned)
+
             rc = runtime.allocate(template)
 
             if OpenNebula.is_error?(rc)
@@ -37,7 +67,7 @@ module ProvisionEngine
             end
 
             runtime.add_service(rb)
-            runtime
+            [0, runtime]
         end
 
         def runtime_update(id, template, options = { :append => false })
@@ -46,8 +76,20 @@ module ProvisionEngine
         end
 
         def runtime_delete(id)
-            runtime = ServerlessRuntime.get(id)
-            runtime.delete(id)
+            runtime = ServerlessRuntime.new_with_id(id, @client_oned)
+            runtime.info
+
+            if runtime.name.nil?
+                return [404, 'Not found']
+            end
+
+            response = runtime.delete
+
+            if OpenNebula.is_error?(response)
+                return [self.class.map_error(response.errno), response.message]
+            end
+
+            [0, '']
         end
 
         def vm_get(id)
