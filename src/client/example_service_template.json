@@ -1,0 +1,83 @@
+{
+  "DOCUMENT": {
+    "TEMPLATE": {
+      "BODY": {
+        "deployment": "straight",
+        "name": "web-application",
+        "roles": [
+          {
+            "scheduled_policies": [
+              {
+                "adjust": 4,
+                "type": "CHANGE",
+                "recurrence": "0 2 1-10 * * "
+              }
+            ],
+            "vm_template": 0,
+            "name": "frontend",
+            "min_vms": 1,
+            "max_vms": 4,
+            "cardinality": 1,
+            "cooldown": 30,
+            "shutdown_action": "shutdown",
+            "elasticity_policies": [
+              {
+                "expression": "CUSTOM_ATT>40",
+                "adjust": 20,
+                "min_adjust_step": 1,
+                "cooldown": 30,
+                "period": 3,
+                "period_number": 30,
+                "type": "PERCENTAGE_CHANGE"
+              }
+            ]
+          },
+          {
+            "scheduled_policies": [
+
+            ],
+            "vm_template": 0,
+            "name": "worker",
+            "min_vms": 2,
+            "max_vms": 10,
+            "cardinality": 2,
+            "parents": [
+              "frontend"
+            ],
+            "cooldown": 240,
+            "shutdown_action": "shutdown",
+            "elasticity_policies": [
+              {
+                "expression": "ATT=3",
+                "adjust": 5,
+                "cooldown": 240,
+                "period": 5,
+                "period_number": 60,
+                "type": "CHANGE"
+              }
+            ]
+          }
+        ],
+        "shutdown_action": "shutdown"
+      }
+    },
+    "TYPE": "101",
+    "GNAME": "oneadmin",
+    "NAME": "web-application",
+    "GID": "0",
+    "ID": "4",
+    "UNAME": "oneadmin",
+    "PERMISSIONS": {
+      "OWNER_A": "0",
+      "OWNER_M": "1",
+      "OWNER_U": "1",
+      "OTHER_A": "0",
+      "OTHER_M": "0",
+      "OTHER_U": "0",
+      "GROUP_A": "0",
+      "GROUP_M": "0",
+      "GROUP_U": "0"
+    },
+    "UID": "0"
+  }
+}

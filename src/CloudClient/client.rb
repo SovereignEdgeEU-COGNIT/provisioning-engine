@@ -18,9 +18,9 @@ module ProvisionEngine
             # EXML_RPC_CALL   = 0xF002
 
             case xmlrpc_errno
-            when OpenNebla::EAUTHORIZATION
+            when OpenNebla::Error::EAUTHORIZATION
                 403
-            when OpenNebla::ENO_EXISTS
+            when OpenNebla::Error::ENO_EXISTS
                 404
             else
                 -1
@@ -28,6 +28,8 @@ module ProvisionEngine
         end
 
         def initialize(conf, auth)
+            @conf = conf
+
             create_client_oned(auth, conf[:one_xmlrpc])
             create_client_oneflow(auth, conf[:oneflow_server])
         end
@@ -53,11 +55,7 @@ module ProvisionEngine
                 return [-1, rc.message]
             end
 
-            # TODO: Map runtime specification to service_template_id and merge options
-            service_options = {}
-            service_template_id = 0
-
-            response = service_template_instantiate(service_template_id, service_options)
+            response = runtime_template_to_service(template)
 
             rc = response.code.to_i
             rb = JSON.parse(response.body)
@@ -67,12 +65,13 @@ module ProvisionEngine
             end
 
             runtime.add_service(rb)
+
             [0, runtime]
         end
 
         def runtime_update(id, template, options = { :append => false })
             runtime = ServerlessRuntime.get(id, @client_oned)
-            runtime.update(id, template, options[:append])
+            runtime.update(template, options[:append])
         end
 
         def runtime_delete(id)
@@ -81,6 +80,19 @@ module ProvisionEngine
 
             if runtime.name.nil?
                 return [404, 'Not found']
+            end
+
+            service_id = runtime.template['service_id']
+            service = service_get(service_id)
+            service_template_id = service['template_id']
+
+            response = service_delete(service_id)
+
+            rc = response.code.to_i
+            rb = JSON.parse(response.body)
+
+            if rc != 204
+                return [rc, rb]
             end
 
             response = runtime.delete
@@ -155,7 +167,52 @@ module ProvisionEngine
 
         private
 
-        def self.flow_element_action(url, action, options = {})
+        # Translates a runtime specification into a service instantiation
+        def runtime_template_to_service(runtime_template)
+            mapping_rules = @conf[:mapping]
+
+            # role0, mandatory
+            faas = runtime_template['faas']
+            # role1, optional
+            daas = runtime_template['daas']
+
+            id = 0
+            options = {}
+
+            # TODO: Create correct service template
+            if false
+                service_template = {}
+
+                response = service_template_create(service_template.to_json)
+
+                rc = response.code.to_i
+                rb = JSON.parse(response.body)
+
+                if rc != 201
+                    return [rc, rb]
+                end
+            end
+
+            response = service_template_instantiate(id, options)
+
+            if false
+                response = service_template_delete(id)
+
+                rc = response.code.to_i
+                rb = JSON.parse(response.body)
+
+                if rc != 204
+                    return [rc, rb]
+                end
+            end
+
+            rc = response.code.to_i
+            rb = JSON.parse(response.body)
+
+            [rc, rb]
+        end
+
+        def flow_element_action(url, action, options = {})
             body = {
                 :action => {
                     :perform => action
@@ -166,7 +223,7 @@ module ProvisionEngine
                 body[:action][:params] = options
             end
 
-            @client.post(url, body)
+            @client_oneflow.post(url, body)
         end
 
         def create_client_oneflow(auth, endpoint)
