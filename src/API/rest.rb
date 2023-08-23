@@ -60,8 +60,9 @@ when 'start'
     RC = 'Response HTTP Return Code'.freeze
     RB = 'Response Body'.freeze
     SR = 'Serverless Runtime'.freeze
+    SRD = 'Serverless Runtime definition'.freeze
     DENIED = 'Permission denied'.freeze
-    SR_INVALID = "Invalid #{SR} defition".freeze
+    SR_INVALID = "Invalid #{SRD}".freeze
     SR_NOT_FOUND = "#{SR} not found".freeze
     SR_FAIL = "Failed to create #{SR}".freeze
 
@@ -122,26 +123,31 @@ when 'start'
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
 
-        response = client.runtime_create(specification)
+        response = ProvisionEngine::ServerlessRuntime.create(client, specification)
         rc = response[0]
         content = response[1]
 
         case rc
-        when 0
-            logger.info("#{RC}: 201")
+        when 201
+            logger.info("#{RC}: #{rc}")
             logger.info("#{SR} created: #{content}")
 
-            json_response(content, 201)
+            json_response(content, rc)
         when 400
-            logger.error("#{RC}: 400")
+            logger.error("#{RC}: #{rc}")
             logger.error("#{SR_INVALID}: #{content}")
 
-            halt 400, json_response({ :message => SR_INVALID }, 400)
+            halt rc, json_response({ :message => SR_INVALID }, rc)
         when 403
-            logger.error("#{RC}: 403")
+            logger.error("#{RC}: #{rc}")
             logger.error("#{DENIED}: #{content}")
 
-            halt 403, json_response({ :message => DENIED }, 403)
+            halt rc, json_response({ :message => DENIED }, rc)
+        when 422
+            logger.error("#{RC}: #{rc}")
+            logger.error("Unprocessable #{SRD}: #{content}")
+
+            halt rc, json_response({ :message => DENIED }, rc)
         else
             logger.error("#{RC}: 500")
             logger.error("#{SR_FAIL}: #{content}")
@@ -154,29 +160,28 @@ when 'start'
         auth = auth?
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
-
         id = params[:id].to_i
 
-        response = client.runtime_get(id)
+        response = ProvisionEngine::ServerlessRuntime.get(client, id)
         rc = response[0]
         content = response[1]
 
         case rc
-        when 0
-            logger.info("#{RC}: 200")
+        when 200
+            logger.info("#{RC}: #{rc}")
             logger.info("#{SR}: #{content}")
 
-            json_response(runtime, 200)
+            json_response(runtime, rc)
         when 403
-            logger.error("#{RC}: 403")
+            logger.error("#{RC}: #{rc}")
             logger.error("#{DENIED}: #{content}")
 
-            halt 403, json_response({ :message => DENIED }, 403)
+            halt rc, json_response({ :message => DENIED }, rc)
         when 404
-            logger.error("#{RC}: 404")
+            logger.error("#{RC}: #{rc}")
             logger.error("#{SR_NOT_FOUND}: #{content}")
 
-            halt 403, json_response({ :message => SR_NOT_FOUND }, 404)
+            halt rc, json_response({ :message => SR_NOT_FOUND }, rc)
         else
             logger.error("#{RC}: 500")
             logger.error("#{SR_FAIL}: #{content}")
@@ -208,26 +213,26 @@ when 'start'
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
 
-        response = client.runtime_delete(id)
+        response = client.runtime_delete(client, id)
         rc = response[0]
         content = response[1]
 
         case rc
-        when 0
-            logger.info("#{RC}: 204")
+        when 204
+            logger.info("#{RC}: #{rc}")
             logger.info("#{SR} deleted")
 
-            json_response(runtime, 204)
+            json_response(runtime, rc)
         when 403
-            logger.error("#{RC}: 403")
+            logger.error("#{RC}: #{rc}")
             logger.error("#{DENIED}: #{content}")
 
-            halt 403, json_response({ :message => DENIED }, 403)
+            halt rc, json_response({ :message => DENIED }, rc)
         when 404
-            logger.error("#{RC}: 404")
+            logger.error("#{RC}: #{rc}")
             logger.error("#{SR_NOT_FOUND}: #{content}")
 
-            halt 403, json_response({ :message => SR_NOT_FOUND }, 404)
+            halt rc, json_response({ :message => SR_NOT_FOUND }, rc)
         else
             logger.error("#{RC}: 500")
             logger.error("#{SR_FAIL}: #{content}")

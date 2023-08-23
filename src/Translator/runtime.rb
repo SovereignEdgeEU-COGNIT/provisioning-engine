@@ -5,12 +5,112 @@ module ProvisionEngine
 
         DOCUMENT_TYPE = 1337
 
+        def self.create(client, specification)
+            if !ServerlessRuntime.validate(specification)
+                message = 'Invalid Serverless Runtime specification'
+                return [400, message]
+            end
+
+            # Create service
+
+            response = ServerlessRuntime.to_service(client, specification)
+            rc = response.code.to_i
+            rb = JSON.parse(response.body)
+
+            if rc != 201
+                return [rc, rb]
+            end
+
+            service = rb
+
+            # Create document from specification + created service state
+
+            specification['SERVICE_ID'] = service['DOCUMENT']['ID']
+
+            service_template = service['DOCUMENT']['TEMPLATE']['BODY']
+            roles = service_template['roles']
+
+            specification['FAAS'].merge!(add_xass(client, roles[0]))
+            specification['DAAS'].merge!(add_xass(client, roles[1])) if roles[1]
+
+            # Register Serverless Runtime json as OpenNebula document
+
+            xml = ServerlessRuntime.build_xml
+            runtime = ServerlessRuntime.new(xml, client)
+            response = runtime.allocate(specification.to_json)
+
+            if OpenNebula.is_error?(response)
+                return [ServerlessRuntime.map_error_oned(response.errno), response.message]
+            end
+
+            runtime.info
+
+            [201, runtime]
+        end
+
+        def self.get(client, id)
+            runtime = ServerlessRuntime.new_with_id(client, id)
+            runtime.info
+
+            return [404, 'Document not found'] if runtime.name.nil?
+
+            [200, runtime]
+        end
+
+        # TODO
+        def self.update(client, id, changes, options = { :append => false })
+            runtime = ServerlessRuntime.new_with_id(client, id)
+            runtime.info
+
+            return [404, 'Document not found'] if runtime.name.nil?
+
+            # Update VMs ?
+
+            # Update service
+
+            # Update document
+
+            runtime.update(changes, options[:append])
+
+            [200, runtime]
+        end
+
+        def self.delete(client, id)
+            runtime = ServerlessRuntime.new_with_id(client, id)
+            runtime.info
+
+            return [404, 'Document not found'] if runtime.name.nil?
+
+            runtime.load_body
+            service_id = runtime.body['DOCUMENT']['TEMPLATE']['BODY']['SERVICE_ID']
+
+            response = client.service_delete(service_id)
+            rc = response.code.to_i
+            rb = JSON.parse(response.body)
+
+            if rc != 204
+                return [rc, rb]
+            end
+
+            response = runtime.delete
+
+            if OpenNebula.is_error?(response)
+                return [self.class.map_error_oned(response.errno), response.message]
+            end
+
+            [204, '']
+        end
+
+        # Child Functions
+
         # Service must have been created prior to allocating the document
         def allocate(specification)
             specification['registration_time'] = Integer(Time.now)
 
             super(specification.to_json, specification['NAME'])
         end
+
+        # Helpers
 
         # TODO: Validate using SCHEMA
         # Ensures the submitted template has the required information
@@ -25,33 +125,55 @@ module ProvisionEngine
             true
         end
 
-        # Updates the document xml with instatianted service information
-        def add_service(service)
-            new_template = {}
+        def self.to_service(client, specification)
+            mapping_rules = client.conf[:mapping]
 
-            service_template = service['DOCUMENT']['TEMPLATE']['BODY']
-            new_template['SERVICE_ID'] = service['DOCUMENT']['ID']
+            faas = specification['faas']
+            daas = specification['daas'] # optional
 
-            roles = service_template['roles']
+            tuple = faas['FLAVOUR']
+            tuple = "#{tuple}-#{daas['FLAVOUR']}" if daas
+            tuple = tuple.to_sym
 
-            add_xass('faas', roles[0])
-            return unless roles[1]
+            # TODO: Consider mapping tuples not required config wise
+            # instead do a template lookup and match by name
+            if !mapping_rules.key?(tuple)
+                msg = "Cannot find a valid service template for the specified flavours: #{tuple}"
+                msg << "FaaS -> #{faas}"
+                msg << "DaaS -> #{daas}" if daas
+                msg << "Mapping rules #{mapping_rules}"
 
-            add_xass('daas', roles[1])
+                return [422, msg]
+            end
 
-            update(new_template)
+            id = mapping_rules[tuple]
+
+            # TODO: Role VM custom: CPU, Memory, Disk Size
+            options = {}
+
+            response = client.service_template_instantiate(id, options)
+
+            rc = response.code.to_i
+            rb = JSON.parse(response.body)
+
+            [rc, rb]
         end
 
-        def add_xass(xass, _role_info)
+        def add_xass(client, role_info)
+            vm_info = role_info['nodes']['vm_info']['VM']
+
+            vm_id = vm_info['ID']
+            client.vm_get(vm)
+
             xaas_template = {}
 
+            xaas_template['vm_id'] = vm_id
             xaas_template['cpu']
             xaas_template['memory']
             xaas_template['disk_size']
             xaas_template['flavour']
             xaas_template['endpoint']
             xaas_template['state']
-            xaas_template['vm_id']
 
             xaas_template
         end
