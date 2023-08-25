@@ -1,0 +1,22 @@
+
+    "SERVERLESS_RUNTIME": {
+        "NAME": "nature-s3",
+        "FAAS": {
+            "CPU": 1,
+            "MEMORY": 512,
+            "FLAVOUR": "nature"
+        },
+        "DAAS": {
+            "CPU": 1,
+            "MEMORY": 512,
+            "FLAVOUR": "s3"
+        },
+        "SCHEDULING": {
+            "POLICY": "energy",
+            "REQUIREMENTS": "FREECPU > 10"
+        },
+        "DEVICE_INFO": {
+            "LATENCY_TO_PE": "100",
+            "GEOGRAPHIC_LOCATION": "Madrid"
+          }
+      }
