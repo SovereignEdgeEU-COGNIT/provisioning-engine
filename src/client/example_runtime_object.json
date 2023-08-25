@@ -16,7 +16,7 @@
           "CPU": 1,
           "MEMORY": 128,
           "DISK_SIZE": 1024,
-          "FLAVOUR": "nature",
+          "FLAVOUR": "s3",
           "ENDPOINT": "localhost:2474",
           "STATE": "RUNNING",
           "VM_ID": 70
@@ -26,7 +26,7 @@
       }
     },
     "ID": "0",
-    "NAME": "Runtime0",
+    "NAME": "Example Runtime Name that might be specified or not defaults to RuntimeID",
     "TYPE": "1337",
     "UID": "0",
     "GID": "0",

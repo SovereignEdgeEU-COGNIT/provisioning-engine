@@ -14,12 +14,13 @@ module ProvisionEngine
             # Create service
 
             response = ServerlessRuntime.to_service(client, specification)
-            rc = response.code.to_i
-            rb = JSON.parse(response.body)
+            rc = response[0]
+            rb = response[1]
 
-            if rc != 201
-                return [rc, rb]
-            end
+            return [rc, rb] if rc != 201
+
+            # TODO: temporary
+            return [201, {}]
 
             service = rb
 
@@ -57,8 +58,9 @@ module ProvisionEngine
             [200, runtime]
         end
 
-        # TODO
         def self.update(client, id, changes, options = { :append => false })
+            return [501, 'TODO']
+
             runtime = ServerlessRuntime.new_with_id(client, id)
             runtime.info
 
@@ -88,9 +90,7 @@ module ProvisionEngine
             rc = response.code.to_i
             rb = JSON.parse(response.body)
 
-            if rc != 204
-                return [rc, rb]
-            end
+            return [rc, rb] if rc != 204
 
             response = runtime.delete
 
@@ -101,7 +101,9 @@ module ProvisionEngine
             [204, '']
         end
 
+        #################
         # Child Functions
+        #################
 
         # Service must have been created prior to allocating the document
         def allocate(specification)
@@ -110,17 +112,16 @@ module ProvisionEngine
             super(specification.to_json, specification['NAME'])
         end
 
+        #################
         # Helpers
+        #################
 
         # TODO: Validate using SCHEMA
         # Ensures the submitted template has the required information
         def self.validate(template)
             return false unless template.key?('FAAS')
-            return false unless template['FASS'].key?('FLAVOUR')
-
+            return false unless template['FAAS'].key?('FLAVOUR')
             return false unless template.key?('DEVICE_INFO')
-            return false unless template.key?('LATENCY_TO_PE')
-            return false unless template.key?('GEOGRAPHIC_LOCATION')
 
             true
         end
@@ -128,15 +129,13 @@ module ProvisionEngine
         def self.to_service(client, specification)
             mapping_rules = client.conf[:mapping]
 
-            faas = specification['faas']
-            daas = specification['daas'] # optional
+            faas = specification['FAAS']
+            daas = specification['DAAS'] # optional
 
             tuple = faas['FLAVOUR']
             tuple = "#{tuple}-#{daas['FLAVOUR']}" if daas
             tuple = tuple.to_sym
 
-            # TODO: Consider mapping tuples not required config wise
-            # instead do a template lookup and match by name
             if !mapping_rules.key?(tuple)
                 msg = "Cannot find a valid service template for the specified flavours: #{tuple}"
                 msg << "FaaS -> #{faas}"

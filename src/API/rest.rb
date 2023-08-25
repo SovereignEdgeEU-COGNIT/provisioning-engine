@@ -23,7 +23,6 @@ if File.directory?(GEMS_LOCATION)
 end
 
 $LOAD_PATH << RUBY_LIB_LOCATION
-# TODO: Decide install location. Customizable on the installer at the moment. Default value.
 $LOAD_PATH << '/opt/provision-engine/'
 
 # Shared Libraries for Modules
@@ -40,9 +39,8 @@ require 'opennebula/oneflow_client'
 require 'log'
 require 'configuration'
 require 'client'
+
 require 'runtime'
-require 'data'
-require 'function'
 
 conf = ProvisionEngine::Configuration.new
 
@@ -57,17 +55,13 @@ when 'start'
     # Define API Helpers
     ############################################################################
 
-    RC = 'Response HTTP Return Code'.freeze
-    RB = 'Response Body'.freeze
     SR = 'Serverless Runtime'.freeze
     SRD = 'Serverless Runtime definition'.freeze
     DENIED = 'Permission denied'.freeze
-    SR_INVALID = "Invalid #{SRD}".freeze
     SR_NOT_FOUND = "#{SR} not found".freeze
-    SR_FAIL = "Failed to create #{SR}".freeze
 
     # Helper method to return JSON responses
-    def json_response(data, status)
+    def json_response(status, data)
         content_type :json
         status status
         data.is_a?(String) ? data : data.to_json
@@ -101,6 +95,12 @@ when 'start'
         end
     end
 
+    def log_response(level, code, body, message)
+        logger.send(level, "Response HTTP Return Code: #{code}")
+        logger.send(level, "Response Body: #{body}")
+        logger.send(level, message)
+    end
+
     ############################################################################
     # API configuration
     ############################################################################
@@ -125,34 +125,24 @@ when 'start'
 
         response = ProvisionEngine::ServerlessRuntime.create(client, specification)
         rc = response[0]
-        content = response[1]
+        rb = response[1]
 
         case rc
         when 201
-            logger.info("#{RC}: #{rc}")
-            logger.info("#{SR} created: #{content}")
-
-            json_response(content, rc)
+            log_response('info', rc, rb, "#{SR} created")
+            json_response(rc, rb)
         when 400
-            logger.error("#{RC}: #{rc}")
-            logger.error("#{SR_INVALID}: #{content}")
-
-            halt rc, json_response({ :message => SR_INVALID }, rc)
+            log_response('error', rc, rb, "Invalid #{SRD}")
+            halt rc, json_response(rc, rb)
         when 403
-            logger.error("#{RC}: #{rc}")
-            logger.error("#{DENIED}: #{content}")
-
-            halt rc, json_response({ :message => DENIED }, rc)
+            log_response('error', rc, rb, DENIED)
+            halt rc, json_response(rc, rb)
         when 422
-            logger.error("#{RC}: #{rc}")
-            logger.error("Unprocessable #{SRD}: #{content}")
-
-            halt rc, json_response({ :message => DENIED }, rc)
+            log_response('error', rc, rb, "Unprocessable #{SRD}")
+            halt rc, json_response(rc, rb)
         else
-            logger.error("#{RC}: 500")
-            logger.error("#{SR_FAIL}: #{content}")
-
-            halt 500, json_response({ :message => SR_FAIL }, 500)
+            log_response('error', rc, rb, "Failed to create #{SR}")
+            halt 500, json_response(500, rb)
         end
     end
 
@@ -164,29 +154,20 @@ when 'start'
 
         response = ProvisionEngine::ServerlessRuntime.get(client, id)
         rc = response[0]
-        content = response[1]
+        rb = response[1]
 
         case rc
         when 200
-            logger.info("#{RC}: #{rc}")
-            logger.info("#{SR}: #{content}")
-
-            json_response(runtime, rc)
+            log_response('info', rc, rb, SR)
+            json_response(rc, rb)
         when 403
-            logger.error("#{RC}: #{rc}")
-            logger.error("#{DENIED}: #{content}")
-
-            halt rc, json_response({ :message => DENIED }, rc)
+            halt rc, json_response(rc, rb)
         when 404
-            logger.error("#{RC}: #{rc}")
-            logger.error("#{SR_NOT_FOUND}: #{content}")
-
-            halt rc, json_response({ :message => SR_NOT_FOUND }, rc)
+            log_response('error', rc, rb, SR_NOT_FOUND)
+            halt rc, json_response(rc, rb)
         else
-            logger.error("#{RC}: 500")
-            logger.error("#{SR_FAIL}: #{content}")
-
-            halt 500, json_response({ :message => SR_FAIL }, 500)
+            log_response('error', rc, rb, "Failed to get #{SR}")
+            halt 500, json_response(500, rb)
         end
     end
 
@@ -215,29 +196,21 @@ when 'start'
 
         response = client.runtime_delete(client, id)
         rc = response[0]
-        content = response[1]
+        rb = response[1]
 
         case rc
         when 204
-            logger.info("#{RC}: #{rc}")
-            logger.info("#{SR} deleted")
-
-            json_response(runtime, rc)
+            log_response('info', rc, rb, "#{SR} created")
+            json_response(rc, rb)
         when 403
-            logger.error("#{RC}: #{rc}")
-            logger.error("#{DENIED}: #{content}")
-
-            halt rc, json_response({ :message => DENIED }, rc)
+            log_response('error', rc, rb, DENIED)
+            halt rc, json_response(rc, rb)
         when 404
-            logger.error("#{RC}: #{rc}")
-            logger.error("#{SR_NOT_FOUND}: #{content}")
-
-            halt rc, json_response({ :message => SR_NOT_FOUND }, rc)
+            log_response('error', rc, rb, SR_NOT_FOUND)
+            halt rc, json_response(rc, rb)
         else
-            logger.error("#{RC}: 500")
-            logger.error("#{SR_FAIL}: #{content}")
-
-            halt 500, json_response({ :message => SR_FAIL }, 500)
+            log_response('error', rc, rb, "Failed to delete #{SR}")
+            halt 500, json_response(500, rb)
         end
     end
 
