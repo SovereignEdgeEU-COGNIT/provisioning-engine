@@ -64,16 +64,6 @@ module ProvisionEngine
             @client_flow.delete("/service/#{id}")
         end
 
-        def service_action(id, action, options = {})
-            url = "/service/#{id}/action", body
-            flow_element_action(url, action, options)
-        end
-
-        def service_role_action(id, role, action, options = {})
-            url = "/service/#{id}/role/#{role}/action"
-            flow_element_action(url, action, options)
-        end
-
         def service_template_get(id)
             @client_flow.get("/service_template/#{id}")
         end
@@ -91,26 +81,32 @@ module ProvisionEngine
         end
 
         def service_template_instantiate(id, options = {})
-            action(id, 'instantiate', options)
-        end
-
-        def service_template_action(id, action, options = {})
-            url = "/service_template/#{id}/action"
-            flow_element_action(url, action, { :merge_template => options })
+            service_template_action(id, 'instantiate', options)
         end
 
         private
 
-        def flow_element_action(url, action, options = {})
-            body = {
-                :action => {
-                    :perform => action
-                }
-            }
+        def service_template_action(id, action, options = {})
+            url = "/service_template/#{id}/action"
+            options = { :merge_template => options } unless options.empty?
 
-            if !options.empty?
-                body[:action][:params] = options
-            end
+            flow_element_action(url, action, { :merge_template => options })
+        end
+
+        def service_action(id, action, options = {})
+            url = "/service/#{id}/action", body
+
+            flow_element_action(url, action, options)
+        end
+
+        def service_role_action(id, role, action, options = {})
+            url = "/service/#{id}/role/#{role}/action"
+
+            flow_element_action(url, action, options)
+        end
+
+        def flow_element_action(url, action, options = {})
+            body = Service.build_json_action(action, options)
 
             @client_oneflow.post(url, body)
         end
