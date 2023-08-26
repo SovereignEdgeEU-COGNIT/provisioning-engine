@@ -46,15 +46,10 @@ conf = ProvisionEngine::Configuration.new
 
 case ARGV[0]
 when 'start'
-    logger = ProvisionEngine::Logger.new(conf[:log])
-
-    logger.info "Using oned at #{conf[:one_xmlrpc]}"
-    logger.info "Using oneflow at #{conf[:oneflow_server]}"
-
     ############################################################################
     # Define API Helpers
     ############################################################################
-
+    RC = 'Response HTTP Return Code'.freeze
     SR = 'Serverless Runtime'.freeze
     SRD = 'Serverless Runtime definition'.freeze
     DENIED = 'Permission denied'.freeze
@@ -71,16 +66,22 @@ when 'start'
         auth_header = request.env['HTTP_AUTHORIZATION']
 
         if auth_header.nil?
-            logger.error("#{RC}: 401")
-            halt 401, json_response({ :message => 'Authentication required' }, 401)
+            rc = 401
+            message = 'Authentication required'
+
+            settings.logger.error(message)
+            halt rc, json_response(rc, { :error => message })
         end
 
         if auth_header.start_with?('Basic ')
             encoded_credentials = auth_header.split(' ')[1]
             username, password = Base64.decode64(encoded_credentials).split(':')
         else
-            logger.error("#{RC}: 401")
-            halt 401, json_response({ :message => 'Unsupported authentication scheme' }, 401)
+            rc = 401
+            message = 'Unsupported authentication scheme'
+
+            settings.logger.error(message)
+            halt rc, json_response(rc, { :error => message })
         end
 
         "#{username}:#{password}"
@@ -90,23 +91,34 @@ when 'start'
         begin
             JSON.parse(request.body.read)
         rescue JSON::ParserError => e
-            logger.error("Invalid JSON: #{e.message}")
-            halt 400, json_response({ :message => 'Invalid JSON data' })
+            rc = 400
+            settings.logger.error("Invalid JSON: #{e.message}")
+            halt rc, json_response(rc, { :error => 'Invalid JSON data' })
         end
     end
 
+    def log_request(type)
+        settings.logger.info("Received request to #{type}")
+    end
+
     def log_response(level, code, body, message)
-        logger.send(level, "Response HTTP Return Code: #{code}")
-        logger.send(level, "Response Body: #{body}")
-        logger.send(level, message)
+        settings.logger.info("#{RC}: #{code}")
+        settings.logger.debug("Response Body: #{body}")
+        settings.logger.send(level, message)
     end
 
     ############################################################################
     # API configuration
     ############################################################################
 
-    set :bind, conf[:host]
-    set :port, conf[:port]
+    configure do
+        set :bind, conf[:host]
+        set :port, conf[:port]
+        set :logger, ProvisionEngine::Logger.new(conf[:log])
+    end
+
+    settings.logger.info "Using oned at #{conf[:one_xmlrpc]}"
+    settings.logger.info "Using oneflow at #{conf[:oneflow_server]}"
 
     ############################################################################
     # Routes setup
@@ -114,10 +126,14 @@ when 'start'
 
     # Log every HTTP Request received
     before do
-        logger.info("API Call: #{request.request_method} #{request.fullpath}")
+        call = "API Call: #{request.request_method} #{request.fullpath} #{request.body.read}"
+        settings.logger.debug(call)
+        request.body.rewind
     end
 
     post '/serverless-runtimes' do
+        log_request("Create a #{SR}")
+
         auth = auth?
         specification = body_valid?
 
@@ -147,6 +163,8 @@ when 'start'
     end
 
     get '/serverless-runtimes/:id' do
+        log_request("Get a #{SR}")
+
         auth = auth?
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
@@ -172,10 +190,10 @@ when 'start'
     end
 
     put '/serverless-runtimes/:id' do
-        logger.error("#{RC}: 501")
-        logger.error("#{SR} update not implemented")
+        log_request("Update a #{SR}")
 
-        halt 501, json_response({ :message => "#{SR} update not implemented" }, 501)
+        log_response('error', 501, {}, "#{SR} update not implemented")
+        halt 501, json_response(501, {})
 
         auth = auth?
         specification = body_valid?
@@ -184,10 +202,12 @@ when 'start'
 
         id = params[:id].to_i
 
-        response = client.runtime_update(id, specification)
+        client.runtime_update(id, specification)
     end
 
     delete '/serverless-runtimes/:id' do
+        log_request("Delete a #{SR}")
+
         auth = auth?
 
         id = params[:id].to_i
