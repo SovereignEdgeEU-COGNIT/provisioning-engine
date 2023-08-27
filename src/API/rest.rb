@@ -63,7 +63,7 @@ when 'start'
         if data.is_a?(Hash)
             data.to_json
         else
-            if (400..499).include?(status_code) || (500..599).include?(status_code)
+            if (400..499).include?(status) || (500..599).include?(status)
                 { :error => data }
             else
                 { :message => data }

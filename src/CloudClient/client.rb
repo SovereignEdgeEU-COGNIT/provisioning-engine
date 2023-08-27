@@ -27,10 +27,15 @@ module ProvisionEngine
             end
         end
 
-        attr_accessor :conf
+        attr_accessor :conf, :client_oned, :client_oneflow, :logger
+
+        #############
+        # oned
+        #############
 
         def initialize(conf, auth)
             @conf = conf
+            @logger = ProvisionEngine::Logger.new(conf[:log], 'CloudClient')
 
             create_client_oned(auth, conf[:one_xmlrpc])
             create_client_oneflow(auth, conf[:oneflow_server])
@@ -41,41 +46,57 @@ module ProvisionEngine
 
             response = vm.info
             if OpenNebula.is_error?(response)
-                return [ServerlessRuntime.map_error_oned(response.errno), response.message]
+                return [ProvisionEngine::CloudClient.map_error_oned(response.errno), response.message]
             end
 
             [200, vm]
         end
 
         def vm_poweroff(id, options = { :hard => false })
-            vm = vm_get(id)
+            response = vm_get(id)
+            rc = response[0]
+            return response unless rc == 200
+
+            vm = response[1]
             vm.poweroff(options[:hard])
         end
 
         def vm_terminate(id, options = { :hard => false })
-            vm = vm_get(id)
+            response = vm_get(id)
+            rc = response[0]
+            return response unless rc == 200
+
+            vm = response[1]
             vm.terminate(options[:hard])
         end
 
+        #############
+        # oneflow
+        #############
+
         def service_get(id)
             response = @client_oneflow.get("/service/#{id}")
-            [response.code.to_i, response.body]
+            [response.code.to_i, JSON.parse(response.body)]
         end
 
         def service_update(id, body)
-            @client_oneflow.put("/service/#{id}", body)
+            response = @client_oneflow.put("/service/#{id}", body)
+            [response.code.to_i, JSON.parse(response.body)]
         end
 
         def service_delete(id)
-            @client_oneflow.delete("/service/#{id}")
+            response = @client_oneflow.delete("/service/#{id}")
+            [response.code.to_i, JSON.parse(response.body)]
         end
 
         def service_template_get(id)
-            @client_oneflow.get("/service_template/#{id}")
+            response = @client_oneflow.get("/service_template/#{id}")
+            [response.code.to_i, JSON.parse(response.body)]
         end
 
         def service_template_instantiate(id, options = {})
-            service_template_action(id, 'instantiate', options)
+            response = service_template_action(id, 'instantiate', options)
+            [response.code.to_i, JSON.parse(response.body)]
         end
 
         private
