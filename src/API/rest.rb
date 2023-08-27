@@ -59,7 +59,16 @@ when 'start'
     def json_response(status, data)
         content_type :json
         status status
-        data.is_a?(String) ? data : data.to_json
+
+        if data.is_a?(Hash)
+            data.to_json
+        else
+            if (400..499).include?(status_code) || (500..599).include?(status_code)
+                { :error => data }
+            else
+                { :message => data }
+            end
+        end
     end
 
     def auth?
@@ -70,7 +79,7 @@ when 'start'
             message = 'Authentication required'
 
             settings.logger.error(message)
-            halt rc, json_response(rc, { :error => message })
+            halt rc, json_response(rc, message)
         end
 
         if auth_header.start_with?('Basic ')
@@ -81,7 +90,7 @@ when 'start'
             message = 'Unsupported authentication scheme'
 
             settings.logger.error(message)
-            halt rc, json_response(rc, { :error => message })
+            halt rc, json_response(rc, message)
         end
 
         "#{username}:#{password}"
@@ -93,7 +102,7 @@ when 'start'
         rescue JSON::ParserError => e
             rc = 400
             settings.logger.error("Invalid JSON: #{e.message}")
-            halt rc, json_response(rc, { :error => 'Invalid JSON data' })
+            halt rc, json_response(rc, 'Invalid JSON data')
         end
     end
 
@@ -192,8 +201,11 @@ when 'start'
     put '/serverless-runtimes/:id' do
         log_request("Update a #{SR}")
 
-        log_response('error', 501, {}, "#{SR} update not implemented")
-        halt 501, json_response(501, {})
+        rc = 501
+        message = "#{SR} update not implemented"
+
+        settings.logger.error("#{SR} update not implemented")
+        halt rc, json_response(rc, message)
 
         auth = auth?
         specification = body_valid?

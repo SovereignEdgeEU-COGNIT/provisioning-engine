@@ -19,20 +19,30 @@ module ProvisionEngine
 
             return [rc, rb] if rc != 201
 
-            # TODO: temporary
-            return [201, {}]
+            # When the service instantiates it has no running VMs
+            # TODO: Wait for running VMs ? Wait for running service ? Runtime is stateless though ?
+            response = client.service_get(rb["DOCUMENT"]["ID"])
+            rc = response[0]
+            rb = response[1]
+
+            return [rc, rb] if rc != 200
 
             service = rb
 
-            # Create document from specification + created service state
+            # TODO: reuse the same CloudClient logfile for a single engine execution
+            logger = Logger.new(client.conf[:log], 'CloudClient')
+            logger.debug('---------Serverless Runtime Service-------------')
+            logger.debug(service)
 
-            specification['SERVICE_ID'] = service['DOCUMENT']['ID']
+            # Create document from specification + created service state
+            specification['SERVICE_ID'] = service['DOCUMENT']['ID']x``
 
             service_template = service['DOCUMENT']['TEMPLATE']['BODY']
             roles = service_template['roles']
 
-            specification['FAAS'].merge!(add_xass(client, roles[0]))
-            specification['DAAS'].merge!(add_xass(client, roles[1])) if roles[1]
+
+            specification['FAAS'].merge!(xaas_template(client, roles[0]))
+            specification['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
 
             # Register Serverless Runtime json as OpenNebula document
 
@@ -58,9 +68,8 @@ module ProvisionEngine
             [200, runtime]
         end
 
-        def self.update(client, id, changes, options = { :append => false })
-            return [501, 'TODO']
-
+        # TODO
+        def update(client, id, changes, options = { :append => false })
             runtime = ServerlessRuntime.new_with_id(client, id)
             runtime.info
 
@@ -77,7 +86,7 @@ module ProvisionEngine
             [200, runtime]
         end
 
-        def self.delete(client, id)
+        def delete(client, id)
             runtime = ServerlessRuntime.new_with_id(client, id)
             runtime.info
 
@@ -101,9 +110,9 @@ module ProvisionEngine
             [204, '']
         end
 
-        #################
-        # Child Functions
-        #################
+        #####################
+        # Inherited Functions
+        #####################
 
         # Service must have been created prior to allocating the document
         def allocate(specification)
@@ -158,21 +167,32 @@ module ProvisionEngine
             [rc, rb]
         end
 
-        def add_xass(client, role_info)
-            vm_info = role_info['nodes']['vm_info']['VM']
-
-            vm_id = vm_info['ID']
-            client.vm_get(vm)
-
+        def self.xaas_template(client, role)
             xaas_template = {}
+            xaas_template['ENDPOINT'] = client.conf[:oneflow_server]
 
-            xaas_template['vm_id'] = vm_id
-            xaas_template['cpu']
-            xaas_template['memory']
-            xaas_template['disk_size']
-            xaas_template['flavour']
-            xaas_template['endpoint']
-            xaas_template['state']
+            # VM might be missing from role info
+            return xaas_template unless role['nodes']
+
+            vm_info = role['nodes']['vm_info']['VM']
+            vm_id = vm_info['ID']
+
+            response = client.vm_get(vm_id)
+            rc = response[0]
+            rb = response[1]
+
+            return response unless rc == 200
+
+            vm = rb
+
+            # consequential parameters
+            xaas_template['VM_ID'] = vm_id
+            xaas_template['STATE'] = vm.state_str
+
+            # optional specification parameters
+            xaas_template['CPU'] = vm['//TEMPLATE/CPU']
+            xaas_template['MEMORY'] = vm['//TEMPLATE/MEMORY']
+            xaas_template['DISK_SIZE'] = vm['//TEMPLATE/DISK/SIZE']
 
             xaas_template
         end
