@@ -46,7 +46,8 @@ module ProvisionEngine
 
             response = vm.info
             if OpenNebula.is_error?(response)
-                return [ProvisionEngine::CloudClient.map_error_oned(response.errno), response.message]
+                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
+                        response.message]
             end
 
             [200, vm]
@@ -86,7 +87,7 @@ module ProvisionEngine
 
         def service_delete(id)
             response = @client_oneflow.delete("/service/#{id}")
-            [response.code.to_i, JSON.parse(response.body)]
+            [response.code.to_i, {}]
         end
 
         def service_template_get(id)

@@ -42,7 +42,7 @@ EXEC_FILE="/usr/local/bin/provision-engine-server"
 
 SRC="log.rb configuration.rb"
 SRC="${SRC} API/rest.rb CloudClient/client.rb"
-SRC="${SRC} Translator/data.rb Translator/function.rb Translator/runtime.rb"
+SRC="${SRC} Translator/runtime.rb"
 
 gems=("opennebula" "sinatra" "logger")
 

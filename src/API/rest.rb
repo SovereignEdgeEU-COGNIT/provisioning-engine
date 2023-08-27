@@ -60,14 +60,14 @@ when 'start'
         content_type :json
         status status
 
-        if data.is_a?(Hash)
-            data.to_json
-        else
+        if data.is_a?(String)
             if (400..499).include?(status) || (500..599).include?(status)
                 { :error => data }
             else
                 { :message => data }
             end
+        else
+            data.to_json
         end
     end
 
@@ -135,9 +135,11 @@ when 'start'
 
     # Log every HTTP Request received
     before do
-        call = "API Call: #{request.request_method} #{request.fullpath} #{request.body.read}"
-        settings.logger.debug(call)
-        request.body.rewind
+        if conf[:log] == 0
+            call = "API Call: #{request.request_method} #{request.fullpath} #{request.body.read}"
+            settings.logger.debug(call)
+            request.body.rewind
+        end
     end
 
     post '/serverless-runtimes' do
@@ -172,7 +174,7 @@ when 'start'
     end
 
     get '/serverless-runtimes/:id' do
-        log_request("Get a #{SR}")
+        log_request("Retrieve a #{SR} information")
 
         auth = auth?
 
@@ -188,6 +190,7 @@ when 'start'
             log_response('info', rc, rb, SR)
             json_response(rc, rb)
         when 403
+            log_response('error', rc, rb, DENIED)
             halt rc, json_response(rc, rb)
         when 404
             log_response('error', rc, rb, SR_NOT_FOUND)
@@ -214,7 +217,7 @@ when 'start'
 
         id = params[:id].to_i
 
-        client.runtime_update(id, specification)
+        ProvisionEngine::ServerlessRuntime.update(client, id, specification)
     end
 
     delete '/serverless-runtimes/:id' do
@@ -226,14 +229,31 @@ when 'start'
 
         client = ProvisionEngine::CloudClient.new(conf, auth)
 
-        response = client.runtime_delete(client, id)
+        # Obtain serverless runtime
+
+        response = ProvisionEngine::ServerlessRuntime.get(client, id)
         rc = response[0]
         rb = response[1]
 
         case rc
-        when 204
-            log_response('info', rc, rb, "#{SR} created")
-            json_response(rc, rb)
+        when 200
+            runtime = rb
+
+            response = runtime.delete(client)
+            rc = response[0]
+            rb = response[1]
+
+            case rc
+            when 204
+                log_response('info', rc, rb, "#{SR} deleted")
+                json_response(rc, rb)
+            when 403
+                log_response('error', rc, rb, DENIED)
+                halt rc, json_response(rc, rb)
+            else
+                log_response('error', rc, rb, "Failed to delete #{SR}")
+                halt 500, json_response(500, rb)
+            end
         when 403
             log_response('error', rc, rb, DENIED)
             halt rc, json_response(rc, rb)

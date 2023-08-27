@@ -5,6 +5,8 @@ module ProvisionEngine
 
         DOCUMENT_TYPE = 1337
 
+        attr_accessor :client # cloud client with both oned and oneflow access
+
         def self.create(client, specification)
             if !ServerlessRuntime.validate(specification)
                 message = 'Invalid Serverless Runtime specification'
@@ -54,24 +56,23 @@ module ProvisionEngine
             client.logger.info('Created Serverless Runtime Document')
 
             runtime.info
-
             [201, runtime]
         end
 
         def self.get(client, id)
-            runtime = ServerlessRuntime.new_with_id(client.client_oned, id)
+            runtime = ServerlessRuntime.new_with_id(id, client.client_oned)
             runtime.info
 
-            return [404, 'Document not found'] if runtime.name.nil?
+            # TODO: Update runtime object with latest service and VM states/information ?
 
-            runtime.load_body
+            return [404, 'Document not found'] if runtime.name.nil?
 
             [200, runtime]
         end
 
         # TODO
         def update(client, id, changes, options = { :append => false })
-            runtime = ServerlessRuntime.new_with_id(client.client_oned, id)
+            runtime = ServerlessRuntime.new_with_id(id, client.client_oned)
             runtime.info
 
             return [404, 'Document not found'] if runtime.name.nil?
@@ -87,24 +88,25 @@ module ProvisionEngine
             [200, runtime]
         end
 
-        def delete(client, id)
-            runtime = ServerlessRuntime.get(client, id)
-
+        # TODO: Extend initialization to keep cloud_client access within the object
+        def delete(client)
             client.logger.info('Deleting Serverless Runtime Service')
 
-            service_id = runtime.body['DOCUMENT']['TEMPLATE']['BODY']['SERVICE_ID']
+            document = JSON.parse(to_json)
+
+            service_id = document['DOCUMENT']['TEMPLATE']['BODY']['SERVICE_ID']
             response = client.service_delete(service_id)
             rc = response[0]
 
             if rc == 404
-                client.logger.warn('Cannot find Serverless Runtime Service')
+                client.logger.warning('Cannot find Serverless Runtime Service')
             elsif rc != 204
                 rb = response[1]
                 return [rc, rb]
             end
 
             client.logger.info('Deleting Serverless Runtime Document')
-            response = runtime.delete
+            response = super()
 
             if OpenNebula.is_error?(response)
                 return [ProvisionEngine::CloudClient.map_error_oned(response.errno), response.message]
@@ -123,7 +125,7 @@ module ProvisionEngine
         def allocate(specification)
             specification['registration_time'] = Integer(Time.now)
 
-            super(specification, specification['NAME'])
+            super(specification.to_json, specification['NAME'])
         end
 
         #################
