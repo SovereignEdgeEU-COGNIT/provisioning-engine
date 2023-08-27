@@ -38,8 +38,13 @@ module ProvisionEngine
 
         def vm_get(id)
             vm = OpenNebula::VirtualMachine.new_with_id(id, @client_oned)
-            vm.info
-            vm
+
+            response = vm.info
+            if OpenNebula.is_error?(response)
+                return [ServerlessRuntime.map_error_oned(response.errno), response.message]
+            end
+
+            [200, vm]
         end
 
         def vm_poweroff(id, options = { :hard => false })
@@ -53,31 +58,20 @@ module ProvisionEngine
         end
 
         def service_get(id)
-            @client_flow.get("/service/#{id}")
+            response = @client_oneflow.get("/service/#{id}")
+            [response.code.to_i, response.body]
         end
 
         def service_update(id, body)
-            @client_flow.put("/service/#{id}", body)
+            @client_oneflow.put("/service/#{id}", body)
         end
 
         def service_delete(id)
-            @client_flow.delete("/service/#{id}")
+            @client_oneflow.delete("/service/#{id}")
         end
 
         def service_template_get(id)
-            @client_flow.get("/service_template/#{id}")
-        end
-
-        def service_template_create(body)
-            @client_flow.post(PATH, body)
-        end
-
-        def service_template_update(id, body)
-            @client_flow.put("/service_template/#{id}", body)
-        end
-
-        def service_template_delete(id)
-            @client_flow.delete("/service_template/#{id}")
+            @client_oneflow.get("/service_template/#{id}")
         end
 
         def service_template_instantiate(id, options = {})
