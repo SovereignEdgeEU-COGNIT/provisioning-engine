@@ -142,6 +142,8 @@ when 'start'
         end
     end
 
+    # TODO: Log runtime json for debug instead of hte object  DEBUG -- : Response Body: #<ProvisionEngine::ServerlessRuntime:0x00000001122c8a90>
+
     post '/serverless-runtimes' do
         log_request("Create a #{SR}")
 
