@@ -94,7 +94,7 @@ module ProvisionEngine
 
             client.logger.info('Serverless Runtime Service created')
 
-            # When the service instantiates it has no running VMs
+            # When the service instantiates it has no associated VMs
             response = client.service_get(rb['DOCUMENT']['ID'])
             rc = response[0]
             rb = response[1]
@@ -121,7 +121,8 @@ module ProvisionEngine
             response = runtime.allocate(specification)
 
             if OpenNebula.is_error?(response)
-                return [ProvisionEngine::CloudClient.map_error_oned(response.errno), response.message]
+                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
+                        response.message]
             end
 
             client.logger.info('Created Serverless Runtime Document')
@@ -180,7 +181,8 @@ module ProvisionEngine
             response = super()
 
             if OpenNebula.is_error?(response)
-                return [ProvisionEngine::CloudClient.map_error_oned(response.errno), response.message]
+                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
+                        response.message]
             end
 
             client.logger.info('Serverless Runtime Document deleted')
@@ -240,8 +242,14 @@ module ProvisionEngine
 
             id = mapping_rules[tuple]
 
-            # TODO: Role VM custom: CPU, Memory, Disk Size
+            # Optional parameters
             options = {}
+
+            if specification['NAME']
+                options['name'] = specification['NAME']
+            else
+                options['name'] = "#{tuple}#{SecureRandom.uuid}"
+            end
 
             client.service_template_instantiate(id, options)
         end
