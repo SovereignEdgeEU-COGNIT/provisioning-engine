@@ -6,6 +6,7 @@ require 'uri'
 
 class SimpleHttpClient
 
+    # TODO: Load from one_auth env and files
     USERNAME = 'oneadmin'
     PASSWORD = 'opennebula'
 

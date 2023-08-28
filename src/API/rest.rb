@@ -1,45 +1,26 @@
 #!/usr/bin/env ruby
 
-############################################################################
-# Environment Configuration
-############################################################################
-ONE_LOCATION = ENV['ONE_LOCATION']
+$LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
 
-if !ONE_LOCATION
-    RUBY_LIB_LOCATION = '/usr/lib/one/ruby'
-    GEMS_LOCATION     = '/usr/share/one/gems'
-else
-    RUBY_LIB_LOCATION = ONE_LOCATION + '/lib/ruby'
-    GEMS_LOCATION     = ONE_LOCATION + '/share/gems'
-end
-
-if File.directory?(GEMS_LOCATION)
-    real_gems_path = File.realpath(GEMS_LOCATION)
-    if !defined?(Gem) || Gem.path != [real_gems_path]
-        $LOAD_PATH.reject! {|l| l =~ /vendor_ruby/ }
-        require 'rubygems'
-        Gem.use_paths(real_gems_path)
-    end
-end
-
-$LOAD_PATH << RUBY_LIB_LOCATION
-$LOAD_PATH << '/opt/provision-engine/'
-
-# Shared Libraries for Modules
+# Standard library
 require 'json'
 require 'yaml'
 require 'base64'
-require 'sinatra'
+require 'fileutils'
+require 'syslog'
+require 'securerandom'
 
-# OpenNebula Libraries
+# Gems
+require 'sinatra'
+require 'logger'
+require 'json-schema'
 require 'opennebula'
 require 'opennebula/oneflow_client'
 
-# Engine Modules
+# Engine libraries
 require 'log'
 require 'configuration'
 require 'client'
-
 require 'runtime'
 
 conf = ProvisionEngine::Configuration.new
@@ -51,7 +32,7 @@ when 'start'
     ############################################################################
     RC = 'Response HTTP Return Code'.freeze
     SR = 'Serverless Runtime'.freeze
-    SRD = 'Serverless Runtime definition'.freeze
+    SRD = "#{SR} definition".freeze
     DENIED = 'Permission denied'.freeze
     SR_NOT_FOUND = "#{SR} not found".freeze
 
@@ -60,15 +41,9 @@ when 'start'
         content_type :json
         status status
 
-        if data.is_a?(String)
-            if (400..499).include?(status) || (500..599).include?(status)
-                { :error => data }
-            else
-                { :message => data }
-            end
-        else
-            data.to_json
-        end
+        return { :message => data } if data.is_a?(String)
+
+        data.to_json
     end
 
     def auth?

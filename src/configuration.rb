@@ -1,5 +1,3 @@
-require 'yaml'
-
 module ProvisionEngine
 
     class Configuration < Hash
