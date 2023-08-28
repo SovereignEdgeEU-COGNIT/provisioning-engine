@@ -5,13 +5,84 @@ module ProvisionEngine
 
         DOCUMENT_TYPE = 1337
 
-        attr_accessor :client # cloud client with both oned and oneflow access
+        SCHEMA_SPECIFICATION = {
+            :type => 'object',
+            :properties => {
+                :SERVERLESS_RUNTIME => {
+                    :type => 'object',
+                :properties => {
+                    :NAME => {
+                        :type => 'string'
+                    },
+                    :FAAS => {
+                        :type => 'object',
+                    :properties => {
+                        :CPU => {
+                            :type => 'integer'
+                        },
+                        :MEMORY => {
+                            :type => 'integer'
+                        },
+                        :DISK_SIZE => {
+                            :type => 'integer'
+                        },
+                        :FLAVOUR => {
+                            :type => 'string'
+                        }
+                    },
+                    :required => ['FLAVOUR']
+                    },
+                    :DAAS => {
+                        :type => 'object',
+                    :properties => {
+                        :CPU => {
+                            :type => 'integer'
+                        },
+                        :MEMORY => {
+                            :type => 'integer'
+                        },
+                        :DISK_SIZE => {
+                            :type => 'integer'
+                        },
+                        :FLAVOUR => {
+                            :type => 'string'
+                        }
+                    },
+                    :required => ['FLAVOUR']
+                    },
+                    :SCHEDULING => {
+                        :type => 'object',
+                    :properties => {
+                        :POLICY => {
+                            :type => 'string'
+                        },
+                        :REQUIREMENTS => {
+                            :type => 'string'
+                        }
+                    }
+                    },
+                    :DEVICE_INFO => {
+                        :type => 'object',
+                    :properties => {
+                        :LATENCY_TO_PE => {
+                            :type => 'integer'
+                        },
+                        :GEOGRAPHIC_LOCATION => {
+                            :type => 'string'
+                        }
+                    }
+                    }
+                },
+                :required => ['FAAS']
+                }
+            }
+        }
 
         def self.create(client, specification)
-            if !ServerlessRuntime.validate(specification)
-                message = 'Invalid Serverless Runtime specification'
-                return [400, message]
-            end
+            response = ServerlessRuntime.validate(specification)
+            return [400, response[1]] unless response[0]
+
+            specification = specification['SERVERLESS_RUNTIME']
 
             client.logger.info('Creating oneflow Service for Serverless Runtime')
 
@@ -132,14 +203,20 @@ module ProvisionEngine
         # Helpers
         #################
 
-        # TODO: Validate using SCHEMA
-        # Ensures the submitted template has the required information
-        def self.validate(template)
-            return false unless template.key?('FAAS')
-            return false unless template['FAAS'].key?('FLAVOUR')
-            return false unless template.key?('DEVICE_INFO')
-
-            true
+        #
+        # Validates the Serverless Runtime specification using the distributed schema
+        #
+        # @param [Hash] specification a valid runtime specification parsed to a Hash
+        #
+        # @return [Array] [true,''] or [false, 'reason']
+        #
+        def self.validate(specification)
+            begin
+                JSON::Validator.validate!(SCHEMA_SPECIFICATION, specification)
+                [true, '']
+            rescue JSON::Schema::ValidationError => e
+                [false, "Invalid Serverless Runtime specification: #{e.message}"]
+            end
         end
 
         def self.to_service(client, specification)
