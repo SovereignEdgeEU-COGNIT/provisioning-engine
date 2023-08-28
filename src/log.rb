@@ -1,7 +1,3 @@
-require 'logger'
-require 'fileutils'
-require 'syslog'
-
 module ProvisionEngine
 
     #
