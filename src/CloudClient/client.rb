@@ -81,11 +81,15 @@ module ProvisionEngine
         end
 
         def service_update(id, body)
+            @logger.debug("Updating service #{id} with #{body}")
+
             response = @client_oneflow.put("/service/#{id}", body)
             [response.code.to_i, JSON.parse(response.body)]
         end
 
         def service_delete(id)
+            @logger.debug("Deleting service #{id}")
+
             response = @client_oneflow.delete("/service/#{id}")
             [response.code.to_i, {}]
         end
@@ -96,6 +100,8 @@ module ProvisionEngine
         end
 
         def service_template_instantiate(id, options = {})
+            @logger.debug("Instantiating service_template #{id} with options #{options}")
+
             response = service_template_action(id, 'instantiate', options)
             [response.code.to_i, JSON.parse(response.body)]
         end
@@ -106,7 +112,7 @@ module ProvisionEngine
             url = "/service_template/#{id}/action"
             options = { :merge_template => options } unless options.empty?
 
-            flow_element_action(url, action, { :merge_template => options })
+            flow_element_action(url, action, options)
         end
 
         def service_action(id, action, options = {})
