@@ -44,7 +44,7 @@ SRC="log.rb configuration.rb"
 SRC="${SRC} API/rest.rb CloudClient/client.rb"
 SRC="${SRC} Translator/runtime.rb"
 
-gems=("opennebula" "sinatra" "logger")
+gems=("opennebula" "sinatra" "logger" "json-schema")
 
 action="${1:-"install"}"
 install_dir="${2:-"/opt/provision-engine"}"

@@ -1,0 +1,9 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "FAAS": {
+      "FLAVOUR": "nature"
+    },
+    "SCHEDULING": {},
+    "DEVICE_INFO": {}
+  }
+}
