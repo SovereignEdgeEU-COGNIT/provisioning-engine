@@ -81,6 +81,8 @@ module ProvisionEngine
             }
         }
 
+        attr_accessor :cclient, :body
+
         def self.create(client, specification)
             response = ServerlessRuntime.validate(specification)
             return [400, response[1]] unless response[0]
@@ -95,44 +97,11 @@ module ProvisionEngine
 
             return [rc, rb] if rc != 201
 
-            client.logger.info("#{SR} Service created")
+            service_id = rb['DOCUMENT']['ID']
 
-            # issue service get calls until service VMs exist
-            1.upto(30) do |t|
-                if t == 30
-                    msg = "OpenNebula did not create VMs for the #{SR} service after #{t} seconds"
-                    return [504, msg]
-                end
+            client.logger.info("#{SR} Service #{service_id} created")
 
-                sleep 1
-
-                response = client.service_get(rb['DOCUMENT']['ID'])
-                rc = response[0]
-                rb = response[1]
-
-                return [rc, rb] if rc != 200
-
-                service = rb
-
-                service_template = service['DOCUMENT']['TEMPLATE']['BODY']
-                roles = service_template['roles']
-
-                begin
-                    roles[0]['nodes'][0]['vm_info']['VM']
-                rescue NoMethodError # will fail if service VM information is missing
-                    client.logger.debug("Waiting #{t} seconds for service VMs")
-
-                    next
-                end
-
-                client.logger.debug(service)
-
-                specification['SERVICE_ID'] = service['DOCUMENT']['ID']
-                specification['FAAS'].merge!(xaas_template(client, roles[0]))
-                specification['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
-
-                break
-            end
+            ServerlessRuntime.service_sync(client, specification, service_id)
 
             client.logger.info("Allocating #{SR} Document")
             client.logger.debug(specification)
@@ -156,27 +125,15 @@ module ProvisionEngine
             runtime = ServerlessRuntime.new_with_id(id, client.client_oned)
             runtime.info
 
-            # TODO: Update runtime object with latest service and VM states/information ?
+            runtime.cclient = client
 
             return [404, 'Document not found'] if runtime.name.nil?
 
-            [200, runtime]
-        end
+            runtime.load_body
+            service_id = runtime.body['SERVICE_ID']
 
-        # TODO
-        def update(client, id, changes, options = { :append => false })
-            runtime = ServerlessRuntime.new_with_id(id, client.client_oned)
-            runtime.info
-
-            return [404, 'Document not found'] if runtime.name.nil?
-
-            # Update VMs ?
-
-            # Update service
-
-            # Update document
-
-            runtime.update(changes, options[:append])
+            ServerlessRuntime.service_sync(client, runtime.body, service_id)
+            runtime.update
 
             [200, runtime]
         end
@@ -231,6 +188,44 @@ module ProvisionEngine
         #################
         # Helpers
         #################
+
+        def self.service_sync(client, runtime_definition, service_id, timeout = 30)
+            1.upto(timeout) do |t|
+                if t == 30
+                    msg = "OpenNebula did not create VMs for the #{SR} service after #{t} seconds"
+                    return [504, msg]
+                end
+
+                sleep 1
+
+                response = client.service_get(service_id)
+                rc = response[0]
+                rb = response[1]
+
+                return [rc, rb] if rc != 200
+
+                service = rb
+
+                service_template = service['DOCUMENT']['TEMPLATE']['BODY']
+                roles = service_template['roles']
+
+                begin
+                    roles[0]['nodes'][0]['vm_info']['VM']
+                rescue NoMethodError # will fail if service VM information is missing
+                    client.logger.debug("Waiting #{t} seconds for service VMs")
+
+                    next
+                end
+
+                client.logger.debug(service)
+
+                runtime_definition['SERVICE_ID'] = service['DOCUMENT']['ID']
+                runtime_definition['FAAS'].merge!(xaas_template(client, roles[0]))
+                runtime_definition['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
+
+                break
+            end
+        end
 
         #
         # Validates the #{SR} specification using the distributed schema
