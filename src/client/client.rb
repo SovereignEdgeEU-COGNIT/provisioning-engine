@@ -92,5 +92,5 @@ if ['get', 'post', 'put', 'delete'].include?(http_request_type) && uri
     end
 else
     puts 'Usage:'
-    puts 'ruby <script_name.rb> [get|post|put|delete] <URI> <JSON file path (for POST and PUT only)>'
+    puts 'client.rb [get|post|put|delete] <URI> <JSON file path (for POST and PUT only)>'
 end

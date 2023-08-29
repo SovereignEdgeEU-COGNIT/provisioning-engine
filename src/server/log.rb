@@ -18,7 +18,7 @@ module ProvisionEngine
         }
 
         #
-        # @param [Hash] config Log configuration as defined in provision_engine.conf
+        # @param [Hash] config Log configuration as defined in engine.conf
         # @param [String] component File where the logs will be written
         #
         def initialize(config, component = 'engine')

@@ -14,7 +14,7 @@ module ProvisionEngine
         }
 
         FIXED = {
-            :configuration_path => '/etc/provision-engine/provision_engine.conf'
+            :configuration_path => '/etc/provision-engine/engine.conf'
         }
 
         def initialize
