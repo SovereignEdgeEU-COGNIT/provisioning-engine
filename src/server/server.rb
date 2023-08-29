@@ -144,6 +144,9 @@ when 'start'
         when 422
             log_response('error', rc, rb, "Unprocessable #{SRD}")
             halt rc, json_response(rc, rb)
+        when 504
+            log_response('error', rc, rb, "Timeout when creating #{SR}")
+            halt rc, json_response(rc, rb)
         else
             log_response('error', rc, rb, "Failed to create #{SR}")
             halt 500, json_response(500, rb)

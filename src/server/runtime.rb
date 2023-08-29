@@ -1,8 +1,11 @@
 module ProvisionEngine
 
-    # Serverless runtime class as wrapper of DocumentJSON
+    #
+    # Document that references a service running functions specified by a client
+    #
     class ServerlessRuntime < OpenNebula::DocumentJSON
 
+        SR = 'Serverless Runtime'.freeze
         DOCUMENT_TYPE = 1337
 
         SCHEMA_SPECIFICATION = {
@@ -84,7 +87,7 @@ module ProvisionEngine
 
             specification = specification['SERVERLESS_RUNTIME']
 
-            client.logger.info('Creating oneflow Service for Serverless Runtime')
+            client.logger.info("Creating oneflow Service for #{SR}")
 
             response = ServerlessRuntime.to_service(client, specification)
             rc = response[0]
@@ -92,28 +95,46 @@ module ProvisionEngine
 
             return [rc, rb] if rc != 201
 
-            client.logger.info('Serverless Runtime Service created')
+            client.logger.info("#{SR} Service created")
 
-            # When the service instantiates it has no associated VMs
-            response = client.service_get(rb['DOCUMENT']['ID'])
-            rc = response[0]
-            rb = response[1]
+            # issue service get calls until service VMs exist
+            1.upto(30) do |t|
+                if t == 30
+                    msg = "OpenNebula did not create VMs for the #{SR} service after #{t} seconds"
+                    return [504, msg]
+                end
 
-            return [rc, rb] if rc != 200
+                sleep 1
 
-            service = rb
+                response = client.service_get(rb['DOCUMENT']['ID'])
+                rc = response[0]
+                rb = response[1]
 
-            client.logger.debug(service)
-            client.logger.info('Allocating Serverless Runtime Document')
+                return [rc, rb] if rc != 200
 
-            specification['SERVICE_ID'] = service['DOCUMENT']['ID']
+                service = rb
 
-            service_template = service['DOCUMENT']['TEMPLATE']['BODY']
-            roles = service_template['roles']
+                service_template = service['DOCUMENT']['TEMPLATE']['BODY']
+                roles = service_template['roles']
 
-            specification['FAAS'].merge!(xaas_template(client, roles[0]))
-            specification['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
+                begin
+                    roles[0]['nodes'][0]['vm_info']['VM']
+                rescue NoMethodError # will fail if service VM information is missing
+                    client.logger.debug("Waiting #{t} seconds for service VMs")
 
+                    next
+                end
+
+                client.logger.debug(service)
+
+                specification['SERVICE_ID'] = service['DOCUMENT']['ID']
+                specification['FAAS'].merge!(xaas_template(client, roles[0]))
+                specification['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
+
+                break
+            end
+
+            client.logger.info("Allocating #{SR} Document")
             client.logger.debug(specification)
 
             xml = ServerlessRuntime.build_xml
@@ -125,7 +146,7 @@ module ProvisionEngine
                         response.message]
             end
 
-            client.logger.info('Created Serverless Runtime Document')
+            client.logger.info("Created #{SR} Document")
 
             runtime.info
             [201, runtime]
@@ -162,7 +183,7 @@ module ProvisionEngine
 
         # TODO: Extend initialization to keep cloud_client access within the object
         def delete(client)
-            client.logger.info('Deleting Serverless Runtime Service')
+            client.logger.info("Deleting #{SR} Service")
 
             document = JSON.parse(to_json)
 
@@ -171,13 +192,13 @@ module ProvisionEngine
             rc = response[0]
 
             if rc == 404
-                client.logger.warning('Cannot find Serverless Runtime Service')
+                client.logger.warning("Cannot find #{SR} Service")
             elsif rc != 204
                 rb = response[1]
                 return [rc, rb]
             end
 
-            client.logger.info('Deleting Serverless Runtime Document')
+            client.logger.info("Deleting #{SR} Document")
             response = super()
 
             if OpenNebula.is_error?(response)
@@ -185,7 +206,7 @@ module ProvisionEngine
                         response.message]
             end
 
-            client.logger.info('Serverless Runtime Document deleted')
+            client.logger.info("#{SR} Document deleted")
 
             [204, '']
         end
@@ -212,7 +233,7 @@ module ProvisionEngine
         #################
 
         #
-        # Validates the Serverless Runtime specification using the distributed schema
+        # Validates the #{SR} specification using the distributed schema
         #
         # @param [Hash] specification a valid runtime specification parsed to a Hash
         #
@@ -223,7 +244,7 @@ module ProvisionEngine
                 JSON::Validator.validate!(SCHEMA_SPECIFICATION, specification)
                 [true, '']
             rescue JSON::Schema::ValidationError => e
-                [false, "Invalid Serverless Runtime specification: #{e.message}"]
+                [false, "Invalid #{SR} specification: #{e.message}"]
             end
         end
 
@@ -255,9 +276,6 @@ module ProvisionEngine
         def self.xaas_template(client, role)
             xaas_template = {}
             xaas_template['ENDPOINT'] = client.conf[:oneflow_server]
-
-            # VM might be missing from role info
-            return xaas_template unless role['nodes']
 
             vm_info = role['nodes'][0]['vm_info']['VM']
             vm_id = vm_info['ID']
