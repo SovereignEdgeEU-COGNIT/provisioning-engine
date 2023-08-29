@@ -44,11 +44,11 @@ module ProvisionEngine
 
         private
 
+        # TODO: Allow reusing previous file log
         def initialize_file_logger(level)
             FileUtils.mkdir_p(LOGS) unless Dir.exist?(LOGS)
             file = File.join(LOGS, "#{@component}.log")
 
-            # TODO: Enable optional rotation on logger.new for CloudClient debugging
             # log rotation
             FileUtils.mv(file, "#{file}.#{Time.now.to_i}") if File.exist?(file)
 
