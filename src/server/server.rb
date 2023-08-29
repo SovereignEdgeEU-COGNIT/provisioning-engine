@@ -85,7 +85,13 @@ when 'start'
         settings.logger.info("Received request to #{type}")
     end
 
-    def log_response(level, code, body, message)
+    def log_response(level, code, data, message)
+        if data.is_a?(String)
+            body = data
+        else
+            body = data.to_json
+        end
+
         settings.logger.info("#{RC}: #{code}")
         settings.logger.debug("Response Body: #{body}")
         settings.logger.send(level, message)
@@ -116,8 +122,6 @@ when 'start'
             request.body.rewind
         end
     end
-
-    # TODO: Log runtime json for debug instead of hte object  DEBUG -- : Response Body: #<ProvisionEngine::ServerlessRuntime:0x00000001122c8a90>
 
     post '/serverless-runtimes' do
         log_request("Create a #{SR}")
