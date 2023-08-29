@@ -138,24 +138,23 @@ module ProvisionEngine
             [200, runtime]
         end
 
-        # TODO: Extend initialization to keep cloud_client access within the object
-        def delete(client)
-            client.logger.info("Deleting #{SR} Service")
+        def delete
+            cclient.logger.info("Deleting #{SR} Service")
 
             document = JSON.parse(to_json)
 
             service_id = document['DOCUMENT']['TEMPLATE']['BODY']['SERVICE_ID']
-            response = client.service_delete(service_id)
+            response = cclient.service_delete(service_id)
             rc = response[0]
 
             if rc == 404
-                client.logger.warning("Cannot find #{SR} Service")
+                cclient.logger.warning("Cannot find #{SR} Service")
             elsif rc != 204
                 rb = response[1]
                 return [rc, rb]
             end
 
-            client.logger.info("Deleting #{SR} Document")
+            cclient.logger.info("Deleting #{SR} Document")
             response = super()
 
             if OpenNebula.is_error?(response)
@@ -163,7 +162,7 @@ module ProvisionEngine
                         response.message]
             end
 
-            client.logger.info("#{SR} Document deleted")
+            cclient.logger.info("#{SR} Document deleted")
 
             [204, '']
         end

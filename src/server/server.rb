@@ -223,7 +223,7 @@ when 'start'
         when 200
             runtime = rb
 
-            response = runtime.delete(client)
+            response = runtime.delete
             rc = response[0]
             rb = response[1]
 
