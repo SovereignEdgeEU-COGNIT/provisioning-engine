@@ -42,6 +42,7 @@ clean() {
 			remove_orphan_gem "$gem_name"
 		done
 
+		[ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR"
 		[ -f "$EXEC_FILE" ] && sudo rm $EXEC_FILE
 	else
 		echo "${CONF_DIR} will not be deleted as part of the cleanup process"
@@ -51,7 +52,6 @@ clean() {
 		[ -L "$EXEC_FILE" ] && sudo rm $EXEC_FILE
 	fi
 
-	[ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR"
 }
 
 is_gem_installed() {
