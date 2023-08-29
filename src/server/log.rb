@@ -1,7 +1,3 @@
-require 'logger'
-require 'fileutils'
-require 'syslog'
-
 module ProvisionEngine
 
     #
@@ -22,7 +18,7 @@ module ProvisionEngine
         }
 
         #
-        # @param [Hash] config Log configuration as defined in provision_engine.conf
+        # @param [Hash] config Log configuration as defined in engine.conf
         # @param [String] component File where the logs will be written
         #
         def initialize(config, component = 'engine')
@@ -48,6 +44,7 @@ module ProvisionEngine
 
         private
 
+        # TODO: Allow reusing previous file log
         def initialize_file_logger(level)
             FileUtils.mkdir_p(LOGS) unless Dir.exist?(LOGS)
             file = File.join(LOGS, "#{@component}.log")

@@ -1,0 +1,19 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "NAME": "Example Serverless Runtime",
+    "FAAS": {
+      "CPU": 1,
+      "MEMORY": 128,
+      "DISK_SIZE": 1024,
+      "FLAVOUR": "nature"
+    },
+    "DAAS": {
+      "CPU": 1,
+      "MEMORY": 128,
+      "DISK_SIZE": 1024,
+      "FLAVOUR": "s3"
+    },
+    "SCHEDULING": {},
+    "DEVICE_INFO": {}
+  }
+}
