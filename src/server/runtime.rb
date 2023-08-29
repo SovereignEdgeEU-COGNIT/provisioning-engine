@@ -198,7 +198,13 @@ module ProvisionEngine
         def allocate(specification)
             specification['registration_time'] = Integer(Time.now)
 
-            super(specification.to_json, specification['NAME'])
+            if specification['NAME']
+                name = specification['NAME']
+            else
+                name = "#{ServerlessRuntime.tuple(specification)}_#{SecureRandom.uuid}"
+            end
+
+            super(specification.to_json, name)
         end
 
         #################
@@ -224,17 +230,12 @@ module ProvisionEngine
         def self.to_service(client, specification)
             mapping_rules = client.conf[:mapping]
 
-            faas = specification['FAAS']
-            daas = specification['DAAS'] # optional
-
-            tuple = faas['FLAVOUR']
-            tuple = "#{tuple}-#{daas['FLAVOUR']}" if daas
-            tuple = tuple.to_sym
+            tuple = ServerlessRuntime.tuple(specification)
 
             if !mapping_rules.key?(tuple)
                 msg = "Cannot find a valid service template for the specified flavours: #{tuple}"
-                msg << "FaaS -> #{faas}"
-                msg << "DaaS -> #{daas}" if daas
+                msg << "FaaS -> #{specification['FAAS']}"
+                msg << "DaaS -> #{specification['DAAS']}" if specification['DAAS']
                 msg << "Mapping rules #{mapping_rules}"
 
                 return [422, msg]
@@ -242,16 +243,13 @@ module ProvisionEngine
 
             id = mapping_rules[tuple]
 
-            # Optional parameters
-            options = {}
+            client.service_template_instantiate(id)
+        end
 
-            if specification['NAME']
-                options['name'] = specification['NAME']
-            else
-                options['name'] = "#{tuple}#{SecureRandom.uuid}"
-            end
-
-            client.service_template_instantiate(id, options)
+        def self.tuple(specification)
+            tuple = specification['FAAS']['FLAVOUR']
+            tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
+            tuple.to_sym
         end
 
         def self.xaas_template(client, role)
