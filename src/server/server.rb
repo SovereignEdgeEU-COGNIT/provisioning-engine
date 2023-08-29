@@ -85,7 +85,13 @@ when 'start'
         settings.logger.info("Received request to #{type}")
     end
 
-    def log_response(level, code, body, message)
+    def log_response(level, code, data, message)
+        if data.is_a?(String)
+            body = data
+        else
+            body = data.to_json
+        end
+
         settings.logger.info("#{RC}: #{code}")
         settings.logger.debug("Response Body: #{body}")
         settings.logger.send(level, message)
@@ -117,8 +123,6 @@ when 'start'
         end
     end
 
-    # TODO: Log runtime json for debug instead of hte object  DEBUG -- : Response Body: #<ProvisionEngine::ServerlessRuntime:0x00000001122c8a90>
-
     post '/serverless-runtimes' do
         log_request("Create a #{SR}")
 
@@ -143,6 +147,9 @@ when 'start'
             halt rc, json_response(rc, rb)
         when 422
             log_response('error', rc, rb, "Unprocessable #{SRD}")
+            halt rc, json_response(rc, rb)
+        when 504
+            log_response('error', rc, rb, "Timeout when creating #{SR}")
             halt rc, json_response(rc, rb)
         else
             log_response('error', rc, rb, "Failed to create #{SR}")
