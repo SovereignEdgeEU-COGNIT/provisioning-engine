@@ -32,6 +32,13 @@ class SimpleHttpClient
 
     private
 
+    def request_with_body(req, json_data)
+        req.body = json_data.to_json
+        req.content_type = 'application/json'
+
+        request(req)
+    end
+
     def request(req)
         req.basic_auth USERNAME, PASSWORD
         response = Net::HTTP.start(@uri.hostname, @uri.port,
@@ -39,18 +46,9 @@ class SimpleHttpClient
             http.request(req)
         end
 
-        # Attempt to parse the response body as JSON, returning nil if it fails
-        begin
-            JSON.parse(response.body)
-        rescue JSON::ParserError
-            nil
-        end
-    end
+        return if response.is_a?(Net::HTTPNoContent)
 
-    def request_with_body(req, json_data)
-        req.body = json_data.to_json
-        req.content_type = 'application/json'
-        request(req)
+        JSON.parse(response.body)
     end
 
 end
@@ -85,11 +83,7 @@ if ['get', 'post', 'put', 'delete'].include?(http_request_type) && uri
                    client.delete
                end
 
-    if response
-        puts JSON.pretty_generate(response)
-    else
-        puts 'Failed to parse response as JSON.'
-    end
+    puts JSON.pretty_generate(response) if response
 else
     puts 'Usage:'
     puts 'client.rb [get|post|put|delete] <URI> <JSON file path (for POST and PUT only)>'
