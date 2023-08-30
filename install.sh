@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 install() {
-	for gem_name in "${gems[@]}"; do
-		is_gem_installed "$gem_name" >/dev/null 2>&1 || gem install "$gem_name"
+	for gem in "${gems[@]}"; do
+		is_gem_installed "$gem" || gem install "$gem"
 	done
 
 	[ -d "$CONF_DIR" ] || sudo mkdir "$CONF_DIR"
@@ -38,8 +38,8 @@ clean() {
 	if [[ $setup_mode == "purge" ]]; then
 		[ -d $CONF_DIR ] && sudo rm -r $CONF_DIR
 
-		for gem_name in "${gems[@]}"; do
-			remove_orphan_gem "$gem_name"
+		for gem in "${gems[@]}"; do
+			remove_orphan_gem "$gem"
 		done
 
 		[ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR"

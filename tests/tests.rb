@@ -1,10 +1,15 @@
 #!/usr/bin/env ruby
 
+# How to use
+# set the engine client authentication in the environmental variable ONE_AUTH
+# export ONE_AUTH='user:pass'
+# ./prepare.sh && rspec tests.rb
+
 require 'rspec'
 require 'json'
 require 'rack/test'
 
-# Runtime libary requirements
+# Serverless Runtime libary requirements
 require 'opennebula'
 require 'json-schema'
 
@@ -13,12 +18,8 @@ require_relative '../src/server/runtime'
 
 SR = 'Serverless Runtime'
 
-def runtime_body(document)
-    document['DOCUMENT']['TEMPLATE']['BODY']
-end
-
 endpoint = 'http://localhost:1337/'
-auth = 'oneadmin:opennebula'
+auth = ENV['ONE_AUTH'] || 'oneadmin:opennebula'
 
 engine_client = ProvisionEngine::Client.new(endpoint, auth)
 
@@ -82,4 +83,8 @@ describe 'Provision Engine API' do
 
         expect(response.code.to_i).to eq(204)
     end
+end
+
+def runtime_body(document)
+    document['DOCUMENT']['TEMPLATE']['BODY']
 end
