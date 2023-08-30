@@ -37,12 +37,9 @@ when 'start'
     SR_NOT_FOUND = "#{SR} not found".freeze
 
     # Helper method to return JSON responses
-    def json_response(status, data)
+    def json_response(response_code, data)
         content_type :json
-        status status
-
-        return { :message => data } if data.is_a?(String)
-
+        status response_code
         data.to_json
     end
 
