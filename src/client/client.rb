@@ -1,90 +1,75 @@
-#!/usr/bin/env ruby
-
 require 'net/http'
-require 'json'
 require 'uri'
 
-class SimpleHttpClient
+module ProvisionEngine
 
-    # TODO: Load from one_auth env and files
-    USERNAME = 'oneadmin'
-    PASSWORD = 'opennebula'
+    #
+    # Specialized HTTP Client exposing engine specific API calls through instance methods
+    #
+    class Client
 
-    def initialize(url)
-        @uri = URI.parse(url)
-    end
+        #
+        # Binds the client to an engine endpoint using a specific credentials
+        #
+        # @param [String] endpoint where the engine is running
+        # @param [String] credentials in the form of user:pass
+        #
+        def initialize(endpoint, auth)
+            uri = URI.parse(endpoint)
+            uri.scheme && uri.host
 
-    def get
-        request(Net::HTTP::Get.new(@uri.request_uri))
-    end
+            if !auth.is_a?(String) && !auth.include?(':')
+                raise 'Invalid auth data type, must be a string like <user>:<password>'
+            end
 
-    def post(json_data)
-        request_with_body(Net::HTTP::Post.new(@uri.request_uri), json_data)
-    end
-
-    def put(json_data)
-        request_with_body(Net::HTTP::Put.new(@uri.request_uri), json_data)
-    end
-
-    def delete
-        request(Net::HTTP::Delete.new(@uri.request_uri))
-    end
-
-    private
-
-    def request_with_body(req, json_data)
-        req.body = json_data.to_json
-        req.content_type = 'application/json'
-
-        request(req)
-    end
-
-    def request(req)
-        req.basic_auth USERNAME, PASSWORD
-        response = Net::HTTP.start(@uri.hostname, @uri.port,
-                                   :use_ssl => @uri.scheme == 'https') do |http|
-            http.request(req)
+            @endpoint = endpoint
+            @user = auth.split(':')[0]
+            @pass = auth.split(':')[1]
         end
 
-        return if response.is_a?(Net::HTTPNoContent)
+        def create(specification)
+            uri = URI.parse("#{@endpoint}/serverless-runtimes")
+            request = Net::HTTP::Post.new(uri)
 
-        JSON.parse(response.body)
-    end
-
-end
-
-# Command-line parsing
-http_request_type = ARGV[0].downcase if ARGV[0]
-uri = ARGV[1]
-json_file_path = ARGV[2]
-
-if ['get', 'post', 'put', 'delete'].include?(http_request_type) && uri
-    client = SimpleHttpClient.new(uri)
-
-    # Read JSON data from file if a path is provided for POST or PUT
-    json_data = nil
-    if json_file_path && ['post', 'put'].include?(http_request_type)
-        begin
-            json_data = JSON.parse(File.read(json_file_path))
-        rescue Errno::ENOENT, JSON::ParserError
-            puts "Failed to read or parse JSON from file: #{json_file_path}"
-            exit 1
+            do_request_with_body(request, uri, specification)
         end
+
+        def get(id)
+            uri = URI.parse("#{@endpoint}/serverless-runtimes/#{id}")
+            request = Net::HTTP::Get.new(uri.request_uri)
+
+            do_request(request, uri)
+        end
+
+        def update(id, specification)
+            uri = URI.parse("#{@endpoint}/serverless-runtimes/#{id}")
+            request = Net::HTTP::Put.new(uri)
+
+            do_request_with_body(request, uri, specification)
+        end
+
+        def delete(id)
+            uri = URI.parse("#{@endpoint}/serverless-runtimes/#{id}")
+            request = Net::HTTP::Delete.new(uri.request_uri)
+
+            do_request(request, uri)
+        end
+
+        private
+
+        def do_request_with_body(request, uri, data)
+            request.body = data.to_json
+            request.content_type = 'application/json'
+
+            do_request(request, uri)
+        end
+
+        def do_request(request, uri)
+            request.basic_auth(@user, @pass)
+            http = Net::HTTP.new(uri.host, uri.port)
+            http.request(request)
+        end
+
     end
 
-    response = case http_request_type
-               when 'get'
-                   client.get
-               when 'post'
-                   client.post(json_data)
-               when 'put'
-                   client.put(json_data)
-               when 'delete'
-                   client.delete
-               end
-
-    puts JSON.pretty_generate(response) if response
-else
-    puts 'Usage:'
-    puts 'client.rb [get|post|put|delete] <URI> <JSON file path (for POST and PUT only)>'
 end
