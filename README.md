@@ -10,7 +10,7 @@ Execute `./install.sh`. The installer will take care of
 - distributing the default configuration
 - distributing the engine libraries and executables
 
-Files are installed by symlinking from the github repository directory to the installation directories.
+By default, files are installed by symlinking from the github repository directory to the installation directories. You can use `./install.sh copy` to issue a file copy instead.
 
 ### Permissions
 
@@ -105,7 +105,7 @@ I, [2023-08-28 18:31:52 #2724]  INFO -- : Created Serverless Runtime Document
 
 ## Uninstall
 
-Execute `./install.sh clean`. It will only remove the distributed files. Dependencies and created directories will remain.
+Execute `./install.sh clean`. It will only remove the engine libraries. Gem dependencies and configuration will remain installed. Alternatively issue `./install.sh clean purge` to remove everything. The gems will be removed unless they are required by other gems already installed in the system.
 
 ## Development
 
