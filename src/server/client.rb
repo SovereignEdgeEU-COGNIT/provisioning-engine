@@ -109,9 +109,9 @@ module ProvisionEngine
         private
 
         def return_http_response(response)
-            if response.instance_variable_defined?(:@body)
+            if response.instance_variable_defined?(:@body) && response.body
                 body = JSON.parse(response.body)
-            elsif response.instance_variable_defined?(:@message)
+            elsif response.instance_variable_defined?(:@message) && response.message
                 body = response.message
             else
                 body = ''
