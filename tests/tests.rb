@@ -71,10 +71,11 @@ describe 'Provision Engine API' do
     it "should get #{SR} update not implemented" do
         response = engine_client.update(id, {})
 
+        expect(response.code.to_i).to eq(501)
+
         body = JSON.parse(response.body)
         pp body
 
-        expect(response.code.to_i).to eq(501)
         expect(body).to eq('Serverless Runtime update not implemented')
     end
 
