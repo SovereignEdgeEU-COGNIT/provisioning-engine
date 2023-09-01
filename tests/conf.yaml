@@ -1,0 +1,2 @@
+:engine_endpoint: 'http://localhost:1337/'
+:auth: 'oneadmin:opennebula'

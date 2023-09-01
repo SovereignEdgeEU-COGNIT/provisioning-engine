@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 
 # How to use
-# set the engine client authentication in the environmental variable ONE_AUTH
-# export ONE_AUTH='user:pass'
-# ./prepare.sh && rspec tests.rb
+# set the engine client authentication and engine endpoint at ./conf.yaml
+# ./prepare.sh $oned $oneflow $nature $nature-s3 && provision-engine-server start && rspec tests.rb
 
-require 'rspec'
 require 'json'
+require 'yaml'
+require 'rspec'
 require 'rack/test'
 
 # Serverless Runtime libary requirements
@@ -18,8 +18,9 @@ require_relative '../src/server/runtime'
 
 SR = 'Serverless Runtime'
 
-endpoint = 'http://localhost:1337/'
-auth = ENV['ONE_AUTH'] || 'oneadmin:opennebula'
+conf = YAML.load_file('./conf.yaml')
+endpoint = conf[:engine_endpoint] || 'http://localhost:1337/'
+auth = conf[:auth] || 'oneadmin:opennebula'
 
 engine_client = ProvisionEngine::Client.new(endpoint, auth)
 
