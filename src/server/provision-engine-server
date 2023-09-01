@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+LOG='/var/log/provision-engine/sinatra.log'
+SERVER='/opt/provision-engine/server.rb'
+PID='/var/run/provision-engine-server.pid'
+
+start() {
+	if [ -f $PID ]; then
+		echo "Found pid $(cat $PID) at ${PID}" >&2
+		echo "Provision Engine is already running or wasn't stopped cleanly" >&2
+		exit 1
+	fi
+	if ruby $SERVER >>$LOG & then
+		echo $! >$PID
+	fi
+}
+
+stop() {
+	if [ ! -f $PID ]; then
+		echo "Could not find server pid file" >&2
+		exit 1
+	fi
+
+	kill -INT "$(cat $PID)" >/dev/null 2>&1 && rm -f $PID >/dev/null 2>&1
+}
+
+help() {
+	echo "Usage: provision-engine-server {start|stop}"
+}
+
+if [ "$1" == 'start' ]; then
+	start
+elif [ "$1" == 'stop' ]; then
+	stop
+else
+	help >&2
+	exit 1
+fi
