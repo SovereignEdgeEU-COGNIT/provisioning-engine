@@ -16,7 +16,7 @@ start() {
 	[ "$1" == 'debug' ] && cmd="ruby -dw" || cmd="ruby"
 
 	# start server in background due to sinatra locking the prompt. Redirect sinatra output to logfile
-	if $cmd $SERVER >> $LOG 2>&1 & then
+	if $cmd $SERVER > $LOG 2>&1 & then
 		echo "${PES} started"
 		echo $! > $PID
 	else
