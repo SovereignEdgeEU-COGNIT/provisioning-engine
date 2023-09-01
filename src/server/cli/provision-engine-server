@@ -10,6 +10,7 @@ start() {
 		echo "Provision Engine is already running or wasn't stopped cleanly" >&2
 		exit 1
 	fi
+
 	if ruby $SERVER >>$LOG & then
 		echo $! >$PID
 	fi
