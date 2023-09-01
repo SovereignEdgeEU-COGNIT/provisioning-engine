@@ -77,36 +77,48 @@ module ProvisionEngine
 
         def service_get(id)
             response = @client_oneflow.get("/service/#{id}")
-            [response.code.to_i, JSON.parse(response.body)]
+            return_http_response(response)
         end
 
         def service_update(id, body)
             @logger.debug("Updating service #{id} with #{body}")
 
             response = @client_oneflow.put("/service/#{id}", body)
-            [response.code.to_i, JSON.parse(response.body)]
+            return_http_response(response)
         end
 
         def service_delete(id)
             @logger.debug("Deleting service #{id}")
 
             response = @client_oneflow.delete("/service/#{id}")
-            [response.code.to_i, {}]
+            return_http_response(response)
         end
 
         def service_template_get(id)
             response = @client_oneflow.get("/service_template/#{id}")
-            [response.code.to_i, JSON.parse(response.body)]
+            return_http_response(response)
         end
 
         def service_template_instantiate(id, options = {})
             @logger.debug("Instantiating service_template #{id} with options #{options}")
 
             response = service_template_action(id, 'instantiate', options)
-            [response.code.to_i, JSON.parse(response.body)]
+            return_http_response(response)
         end
 
         private
+
+        def return_http_response(response)
+            if response.instance_variable_defined?(:@body)
+                body = JSON.parse(response.body)
+            elsif response.instance_variable_defined?(:@message)
+                body = response.message
+            else
+                body = ''
+            end
+
+            [response.code.to_i, body]
+        end
 
         def service_template_action(id, action, options = {})
             url = "/service_template/#{id}/action"

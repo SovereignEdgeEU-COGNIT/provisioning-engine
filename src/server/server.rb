@@ -34,6 +34,7 @@ when 'start'
     SR = 'Serverless Runtime'.freeze
     SRD = "#{SR} definition".freeze
     DENIED = 'Permission denied'.freeze
+    NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
     SR_NOT_FOUND = "#{SR} not found".freeze
 
     # Helper method to return JSON responses
@@ -139,6 +140,9 @@ when 'start'
         when 400
             log_response('error', rc, rb, "Invalid #{SRD}")
             halt rc, json_response(rc, rb)
+        when 401
+            log_response('error', rc, rb, NO_AUTH)
+            halt rc, json_response(rc, rb)
         when 403
             log_response('error', rc, rb, DENIED)
             halt rc, json_response(rc, rb)
@@ -170,6 +174,9 @@ when 'start'
         when 200
             log_response('info', rc, rb, SR)
             json_response(rc, rb)
+        when 401
+            log_response('error', rc, rb, NO_AUTH)
+            halt rc, json_response(rc, rb)
         when 403
             log_response('error', rc, rb, DENIED)
             halt rc, json_response(rc, rb)
@@ -235,6 +242,9 @@ when 'start'
                 log_response('error', rc, rb, "Failed to delete #{SR}")
                 halt 500, json_response(500, rb)
             end
+        when 401
+            log_response('error', rc, rb, NO_AUTH)
+            halt rc, json_response(rc, rb)
         when 403
             log_response('error', rc, rb, DENIED)
             halt rc, json_response(rc, rb)
