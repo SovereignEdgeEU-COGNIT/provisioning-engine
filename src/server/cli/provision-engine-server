@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-LOG='/var/log/provision-engine/sinatra.log'
-SERVER='/opt/provision-engine/server.rb'
-PID='/var/run/provision-engine-server.pid'
+PE="provision-engine"
+PES="${PE}-server"
+LOG="/var/log/${PE}/api.log"
+SERVER="/opt/${PE}/server.rb"
+PID="/tmp/${PES}.pid"
 
 start() {
 	if [ -f $PID ]; then
@@ -11,8 +13,14 @@ start() {
 		exit 1
 	fi
 
-	if ruby $SERVER >>$LOG & then
-		echo $! >$PID
+	[ "$1" == 'debug' ] && cmd="ruby -dw" || cmd="ruby"
+
+	# start server in background due to sinatra locking the prompt. Redirect sinatra output to logfile
+	if $cmd $SERVER >> $LOG 2>&1 & then
+		echo "${PES} started"
+		echo $! > $PID
+	else
+		echo "failed to start ${PES}. Check ${LOG}" >&2
 	fi
 }
 
@@ -22,18 +30,23 @@ stop() {
 		exit 1
 	fi
 
-	kill -INT "$(cat $PID)" >/dev/null 2>&1 && rm -f $PID >/dev/null 2>&1
+	if kill -INT "$(cat $PID)"; then
+		echo "${PES} stopped"
+		rm -f $PID
+	else
+		echo "failed to stop ${PES}" >&2
+	fi
 }
 
 help() {
-	echo "Usage: provision-engine-server {start|stop}"
+	echo "Usage: ${PES} {start|stop} <debug>"
 }
 
 if [ "$1" == 'start' ]; then
-	start
+	start "$2"
 elif [ "$1" == 'stop' ]; then
 	stop
 else
-	help >&2
+	help
 	exit 1
 fi
