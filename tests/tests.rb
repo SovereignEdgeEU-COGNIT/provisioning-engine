@@ -51,8 +51,10 @@ describe 'Provision Engine API' do
     end
 
     it "should get #{SR} info" do
-        1.upto(30) do |t|
-            expect(t == 30).to be(false)
+        attempts = 30
+
+        1.upto(attempts) do |t|
+            expect(t == attempts).to be(false)
 
             response = engine_client.get(id)
 
@@ -63,6 +65,7 @@ describe 'Provision Engine API' do
 
             body = runtime_body(document)
 
+            # Even though the VM reaches RUNNING, the service might not
             next unless body['FAAS']['STATE'] == 'ACTIVE'
 
             break
@@ -81,9 +84,22 @@ describe 'Provision Engine API' do
     end
 
     it "should delete a #{SR}" do
-        response = engine_client.delete(id)
+        attempts = 10
 
-        expect(response.code.to_i).to eq(204)
+        1.upto(attempts) do |t|
+            sleep 1
+
+            expect(t == attempts).to be(false)
+
+            response = engine_client.delete(id)
+            rc = response.code.to_i
+
+            next unless rc == 204
+
+            expect(rc).to eq(204)
+
+            break
+        end
     end
 end
 

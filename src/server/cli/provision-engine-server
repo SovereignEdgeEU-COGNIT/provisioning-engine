@@ -2,7 +2,8 @@
 
 PE="provision-engine"
 PES="${PE}-server"
-LOG="/var/log/${PE}/api.log"
+LOG_DIR="/var/log/${PE}"
+LOG="${LOG_DIR}/api.log"
 SERVER="/opt/${PE}/server.rb"
 PID="/tmp/${PES}.pid"
 
@@ -15,12 +16,15 @@ start() {
 
 	[ "$1" == 'debug' ] && cmd="ruby -dw" || cmd="ruby"
 
+	[ -d $LOG_DIR ] || sudo mkdir $LOG_DIR && sudo chown "$USER" $LOG_DIR
+
 	# start server in background due to sinatra locking the prompt. Redirect sinatra output to logfile
 	if $cmd $SERVER > $LOG 2>&1 & then
 		echo "${PES} started"
 		echo $! > $PID
 	else
 		echo "failed to start ${PES}. Check ${LOG}" >&2
+		exit 1
 	fi
 }
 

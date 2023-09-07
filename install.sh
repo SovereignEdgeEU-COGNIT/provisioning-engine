@@ -2,7 +2,7 @@
 
 install() {
 	for gem in "${gems[@]}"; do
-		is_gem_installed "$gem" || gem install "$gem"
+		is_gem_installed "$gem" || sudo gem install "$gem"
 	done
 
 	[ -d "$CONF_DIR" ] || sudo mkdir "$CONF_DIR"
@@ -29,7 +29,6 @@ install() {
 }
 
 postinstall() {
-	[ -L "$EXEC_PATH" ] || sudo ln -s "${INSTALL_DIR}/server.rb" "$EXEC_PATH"
 	echo "provision engine installed at ${INSTALL_DIR}"
 	echo "run engine with ${EXEC_PATH} start/stop"
 }
@@ -52,11 +51,11 @@ clean() {
 }
 
 is_gem_installed() {
-	gem list -i "$1" >/dev/null 2>&1
+	sudo gem list -i "$1" >/dev/null 2>&1
 }
 
 remove_orphan_gem() {
-	gem uninstall -a --abort-on-dependent "$1" >/dev/null 2>&1
+	sudo gem uninstall -a --abort-on-dependent "$1" >/dev/null 2>&1
 }
 
 CONF_DIR="/etc/provision-engine"

@@ -1,2 +1,2 @@
-:engine_endpoint: 'http://localhost:1337/'
+:engine_endpoint: 'http://localhost:1337/' # TODO: load from engine.conf
 :auth: 'oneadmin:opennebula'
