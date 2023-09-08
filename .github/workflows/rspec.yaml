@@ -18,7 +18,7 @@ jobs:
         run: ./install.sh
 
       - name: Configure
-        run: cd ./tests && ./prepare.rb "http://${ONE}:2633/RPC2" "http://${ONE}:2474" 0 1
+        run: cd ./tests && ./prepare.rb "http://${{ env.ONE }}:2633/RPC2" "http://${{ env.ONE }}:2474" 0 1
 
       # Maybe should be included in rspec
       - name: Start engine
