@@ -8,9 +8,8 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        ruby-version: ['3.2']
+    env:
+      ONE: "3.72.81.234" # opennebula endpoint to be used by the PE runner
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -19,7 +18,7 @@ jobs:
         run: ./install.sh
 
       - name: Configure
-        run: cd ./tests && ./prepare.rb http://3.72.81.234:2633/RPC2 http://3.72.81.234:2474 0 1
+        run: cd ./tests && ./prepare.rb "http://${ONE}:2633/RPC2" "http://${ONE}:2474" 0 1
 
       # Maybe should be included in rspec
       - name: Start engine
