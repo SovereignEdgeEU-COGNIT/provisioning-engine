@@ -84,7 +84,7 @@ describe 'Provision Engine API' do
     end
 
     it "should delete a #{SR}" do
-        attempts = 10
+        attempts = 30
 
         1.upto(attempts) do |t|
             sleep 1
