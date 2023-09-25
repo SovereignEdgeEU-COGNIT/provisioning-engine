@@ -9,7 +9,11 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     env:
-      ONE: "3.72.81.234" # opennebula endpoint to be used by the PE runner
+      oned: https://cognit-lab.sovereignedge.eu/RPC2
+      oneflow: https://cognit-lab-oneflow.sovereignedge.eu/
+      nature: 2
+      nature_s3: 4 # still not configured on the frontend nor it runs in the tests
+      TESTS_AUTH: ${{ secrets.TESTS_AUTH }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -18,7 +22,7 @@ jobs:
         run: ./install.sh
 
       - name: Configure
-        run: cd ./tests && ./prepare.rb "http://${{ env.ONE }}:2633/RPC2" "http://${{ env.ONE }}:2474" 0 1
+        run: cd ./tests && ./prepare.rb "${{ env.oned }}" "${{ env.oneflow }}" "${{ env.nature }}" "${{ env.nature_s3 }}"
 
       # Maybe should be included in rspec
       - name: Start engine
