@@ -1,2 +1,3 @@
-:engine_endpoint: 'http://localhost:1337/' # TODO: load from engine.conf
-:auth: 'oneadmin:opennebula'
+:timeouts:
+  :get: 120
+  :delete: 30

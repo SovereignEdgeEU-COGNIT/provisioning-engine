@@ -18,9 +18,11 @@ require_relative '../src/server/runtime'
 
 SR = 'Serverless Runtime'
 
-conf = YAML.load_file('./conf.yaml')
-endpoint = conf[:engine_endpoint] || 'http://localhost:1337/'
-auth = conf[:auth] || 'oneadmin:opennebula'
+conf_engine = YAML.load_file('/etc/provision-engine/engine.conf')
+endpoint = "http://#{conf_engine[:host]}:#{conf_engine[:port]}"
+
+conf_tests = YAML.load_file('./conf.yaml')
+auth = ENV['TESTS_AUTH'] || 'oneadmin:opennebula'
 
 engine_client = ProvisionEngine::Client.new(endpoint, auth)
 
@@ -51,9 +53,10 @@ describe 'Provision Engine API' do
     end
 
     it "should get #{SR} info" do
-        attempts = 30
+        attempts = conf_tests[:timeouts][:get]
 
         1.upto(attempts) do |t|
+            sleep 1
             expect(t == attempts).to be(false)
 
             response = engine_client.get(id)
@@ -84,11 +87,10 @@ describe 'Provision Engine API' do
     end
 
     it "should delete a #{SR}" do
-        attempts = 30
+        attempts = conf_tests[:timeouts][:get]
 
         1.upto(attempts) do |t|
             sleep 1
-
             expect(t == attempts).to be(false)
 
             response = engine_client.delete(id)
