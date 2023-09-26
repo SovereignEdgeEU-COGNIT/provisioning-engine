@@ -286,7 +286,7 @@ module ProvisionEngine
         def self.tuple(specification)
             tuple = specification['FAAS']['FLAVOUR']
             tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
-            tuple.to_sym
+            tuple
         end
 
         #
