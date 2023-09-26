@@ -188,14 +188,22 @@ module ProvisionEngine
         # Helpers
         #################
 
+        #
+        # Updates Serverless Runtime Document specification based on the underlying elements state
+        #
+        # @param [CloudClient] client OpenNebula interface
+        # @param [Hash] runtime_definition Serverless Runtime definition to be updated
+        # @param [Integer] service_id OneFlow service ID mapped to the Serverless Runtime
+        # @param [Integer] timeout How long to wait for Role VMs to be created
+        #
         def self.service_sync(client, runtime_definition, service_id, timeout = 30)
             1.upto(timeout) do |t|
+                sleep 1
+
                 if t == 30
                     msg = "OpenNebula did not create VMs for the #{SR} service after #{t} seconds"
                     return [504, msg]
                 end
-
-                sleep 1
 
                 response = client.service_get(service_id)
                 rc = response[0]
@@ -227,7 +235,7 @@ module ProvisionEngine
         end
 
         #
-        # Validates the #{SR} specification using the distributed schema
+        # Validates the Serverless Runtime specification using the distributed schema
         #
         # @param [Hash] specification a valid runtime specification parsed to a Hash
         #
@@ -281,6 +289,14 @@ module ProvisionEngine
             tuple.to_sym
         end
 
+        #
+        # Creates a runtime function hash for the Serverless Runtime document
+        #
+        # @param [CloudClient] OpenNebula interface
+        # @param [Hash] role oneflow service role information
+        #
+        # @return [Hash] Function hash
+        #
         def self.xaas_template(client, role)
             xaas_template = {}
             xaas_template['ENDPOINT'] = client.conf[:oneflow_server]
