@@ -11,8 +11,6 @@ jobs:
     env:
       oned: https://cognit-lab.sovereignedge.eu/RPC2
       oneflow: https://cognit-lab-oneflow.sovereignedge.eu/
-      nature: 2
-      nature_s3: 4 # still not configured on the frontend nor it runs in the tests
       TESTS_AUTH: ${{ secrets.TESTS_AUTH }}
     steps:
       - name: Checkout code
@@ -22,7 +20,7 @@ jobs:
         run: ./install.sh
 
       - name: Configure
-        run: cd ./tests && ./prepare.rb "${{ env.oned }}" "${{ env.oneflow }}" "${{ env.nature }}" "${{ env.nature_s3 }}"
+        run: cd ./tests && ./prepare.rb "${{ env.oned }}" "${{ env.oneflow }}"
 
       # Maybe should be included in rspec
       - name: Start engine

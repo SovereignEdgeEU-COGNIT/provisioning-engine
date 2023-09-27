@@ -1,8 +1,6 @@
 #!/usr/bin/env ruby
 
-# How to use
-# set the engine client authentication and engine endpoint at ./conf.yaml
-# ./prepare.sh $oned $oneflow $nature $nature-s3 && provision-engine-server start && rspec tests.rb
+# How to use: See ./github/workflows/rspec.yml
 
 require 'json'
 require 'yaml'

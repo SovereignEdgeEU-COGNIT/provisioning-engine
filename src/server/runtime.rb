@@ -188,14 +188,22 @@ module ProvisionEngine
         # Helpers
         #################
 
+        #
+        # Updates Serverless Runtime Document specification based on the underlying elements state
+        #
+        # @param [CloudClient] client OpenNebula interface
+        # @param [Hash] runtime_definition Serverless Runtime definition to be updated
+        # @param [Integer] service_id OneFlow service ID mapped to the Serverless Runtime
+        # @param [Integer] timeout How long to wait for Role VMs to be created
+        #
         def self.service_sync(client, runtime_definition, service_id, timeout = 30)
             1.upto(timeout) do |t|
+                sleep 1
+
                 if t == 30
                     msg = "OpenNebula did not create VMs for the #{SR} service after #{t} seconds"
                     return [504, msg]
                 end
-
-                sleep 1
 
                 response = client.service_get(service_id)
                 rc = response[0]
@@ -227,7 +235,7 @@ module ProvisionEngine
         end
 
         #
-        # Validates the #{SR} specification using the distributed schema
+        # Validates the Serverless Runtime specification using the distributed schema
         #
         # @param [Hash] specification a valid runtime specification parsed to a Hash
         #
@@ -242,31 +250,53 @@ module ProvisionEngine
             end
         end
 
+        #
+        # Create oneflow service based on Serverless Runtime specification
+        #
+        # @param [CloudClient] OpenNebula interface
+        # @param [Hash] specification Serverless Runtime specification
+        #
+        # @return [Array] Response Code and Body of the operation
+        #
         def self.to_service(client, specification)
-            mapping_rules = client.conf[:mapping]
+            response = client.service_template_pool_get
+            rc = response[0]
+
+            return response if rc != 200
+
+            service_templates = response[1]['DOCUMENT_POOL']['DOCUMENT']
 
             tuple = ServerlessRuntime.tuple(specification)
 
-            if !mapping_rules.key?(tuple)
-                msg = "Cannot find a valid service template for the specified flavours: #{tuple}"
-                msg << "FaaS -> #{specification['FAAS']}"
-                msg << "DaaS -> #{specification['DAAS']}" if specification['DAAS']
-                msg << "Mapping rules #{mapping_rules}"
+            service_templates.each do |service_template|
+                next unless service_template['TEMPLATE']['BODY']['name'] == tuple
 
-                return [422, msg]
+                id = service_template['ID']
+
+                return client.service_template_instantiate(id)
             end
 
-            id = mapping_rules[tuple]
+            msg = "Cannot find a valid service template for the specified flavours: #{tuple}"
+            msg << "FaaS -> #{specification['FAAS']}"
+            msg << "DaaS -> #{specification['DAAS']}" if specification['DAAS']
 
-            client.service_template_instantiate(id)
+            return [422, msg]
         end
 
         def self.tuple(specification)
             tuple = specification['FAAS']['FLAVOUR']
             tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
-            tuple.to_sym
+            tuple
         end
 
+        #
+        # Creates a runtime function hash for the Serverless Runtime document
+        #
+        # @param [CloudClient] OpenNebula interface
+        # @param [Hash] role oneflow service role information
+        #
+        # @return [Hash] Function hash
+        #
         def self.xaas_template(client, role)
             xaas_template = {}
             xaas_template['ENDPOINT'] = client.conf[:oneflow_server]

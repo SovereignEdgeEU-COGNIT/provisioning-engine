@@ -99,6 +99,11 @@ module ProvisionEngine
             return_http_response(response)
         end
 
+        def service_template_pool_get
+            response = @client_oneflow.get('/service_template')
+            return_http_response(response)
+        end
+
         def service_template_instantiate(id, options = {})
             @logger.debug("Instantiating service_template #{id} with options #{options}")
 

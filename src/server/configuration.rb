@@ -1,5 +1,8 @@
 module ProvisionEngine
 
+    #
+    # Abstraction to deserialize engine.conf config file
+    #
     class Configuration < Hash
 
         DEFAULTS = {
