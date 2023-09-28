@@ -1,0 +1,11 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "NAME": "Example Serverless Runtime",
+    "FAAS": {
+      "MEMORY": 133,
+      "FLAVOUR": "nature"
+    },
+    "SCHEDULING": {},
+    "DEVICE_INFO": {}
+  }
+}

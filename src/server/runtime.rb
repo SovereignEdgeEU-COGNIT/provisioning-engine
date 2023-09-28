@@ -94,6 +94,9 @@ module ProvisionEngine
             }
         }
 
+        # VM attributes that can be manually specified by the runtime client
+        VM_REQUIREMENTS = ['CPU', 'MEMORY', 'DISK_SIZE']
+
         attr_accessor :cclient, :body
 
         def self.create(client, specification)
@@ -308,8 +311,9 @@ module ProvisionEngine
                 next unless service_template['TEMPLATE']['BODY']['name'] == tuple
 
                 id = service_template['ID']
+                options = ServerlessRuntime.vm_requirements(specification)
 
-                return client.service_template_instantiate(id)
+                return client.service_template_instantiate(id, options)
             end
 
             msg = "Cannot find a valid service template for the specified flavours: #{tuple}\n"
@@ -323,6 +327,35 @@ module ProvisionEngine
             tuple = specification['FAAS']['FLAVOUR']
             tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
             tuple
+        end
+
+        def self.vm_requirements(specification)
+            merge_template = {
+                'roles' => []
+            }
+
+            ['FAAS', 'DAAS'].each do |role|
+                next unless specification[role]
+
+                merge_template['roles'] << {
+                    'name' => role,
+                    'vm_template_contents' => xaas_requirements(role)
+                }
+            end
+
+            merge_template
+        end
+
+        def xaas_requirements(role)
+            xaas = []
+            sf = specification[role]
+
+            # TODO: Use VM_REQUIREMENTS constant
+            xaas << "CPU=#{sf['CPU']}" if sf['CPU']
+            xaas << "MEMORY=#{sf['MEMORY']}" if sf['MEMORY']
+            xaas << "DISK=[SIZE=\"#{sf['MEMORY']}\"]" if sf['DISK_SIZE']
+
+            xaas.join("\n")
         end
 
         #

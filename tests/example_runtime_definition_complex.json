@@ -3,12 +3,13 @@
     "NAME": "Example Serverless Runtime",
     "FAAS": {
       "CPU": 1,
+      "VCPU": 1,
       "MEMORY": 128,
       "DISK_SIZE": 1024,
       "FLAVOUR": "Function"
     },
     "DAAS": {
-      "CPU": 1,
+      "VCPU": 1,
       "MEMORY": 128,
       "DISK_SIZE": 1024,
       "FLAVOUR": "Data"
