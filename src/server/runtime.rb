@@ -29,6 +29,9 @@ module ProvisionEngine
                         :CPU => {
                             :type => 'number'
                         },
+                        :VCPU => {
+                            :type => 'float'
+                        },
                         :MEMORY => {
                             :type => 'integer'
                         },
@@ -48,6 +51,9 @@ module ProvisionEngine
                               :properties => {
                                   :CPU => {
                                       :type => 'number'
+                                  },
+                                  :VCPU => {
+                                      :type => 'integer'
                                   },
                                 :MEMORY => {
                                     :type => 'integer'
@@ -93,9 +99,6 @@ module ProvisionEngine
                 }
             }
         }
-
-        # VM attributes that can be manually specified by the runtime client
-        VM_REQUIREMENTS = ['CPU', 'MEMORY', 'DISK_SIZE']
 
         attr_accessor :cclient, :body
 
@@ -335,27 +338,25 @@ module ProvisionEngine
             }
 
             ['FAAS', 'DAAS'].each do |role|
-                next unless specification[role]
+                rr = specification[role]
+
+                next unless rr
+
+                xaas = []
+
+                # TODO: Live resize
+                xaas << "CPU=#{rr['CPU']}" if rr['CPU']
+                xaas << "VCPU=#{rr['VCPU']}" if rr['VCPU']
+                xaas << "MEMORY=#{rr['MEMORY']}" if rr['MEMORY']
+                xaas << "DISK=[SIZE=\"#{rr['DISK_SIZE']}\"]" if rr['DISK_SIZE']
 
                 merge_template['roles'] << {
                     'name' => role,
-                    'vm_template_contents' => xaas_requirements(role)
+                    'vm_template_contents' => xaas.join("\n")
                 }
             end
 
             merge_template
-        end
-
-        def xaas_requirements(role)
-            xaas = []
-            sf = specification[role]
-
-            # TODO: Use VM_REQUIREMENTS constant
-            xaas << "CPU=#{sf['CPU']}" if sf['CPU']
-            xaas << "MEMORY=#{sf['MEMORY']}" if sf['MEMORY']
-            xaas << "DISK=[SIZE=\"#{sf['MEMORY']}\"]" if sf['DISK_SIZE']
-
-            xaas.join("\n")
         end
 
         #
