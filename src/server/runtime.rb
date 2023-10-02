@@ -324,51 +324,55 @@ module ProvisionEngine
 
                 # establish custom role vm requirements from runtime specification
                 ['FAAS', 'DAAS'].each do |role|
-                    flavour = specification[role]
-                    next unless flavour
+                    spec_role = specification[role]
+                    next unless spec_role
 
                     # get vm_template capacity in case is needed for capacity reference
-                    role_vm_template_id = service_template_body[role]['vm_template']
-                    response = client.vm_template_get(role_vm_template_id)
-                    return response unless response[0] == 200
+                    service_template_body['roles'].each do |template_role|
+                        next unless template_role == spec_role
 
-                    vm_template = response[1]
+                        response = client.vm_template_get(role['vm_template'])
+                        return response unless response[0] == 200
 
-                    xaas = []
+                        vm_template = response[1]
 
-                    xaas << "CPU=#{flavour['CPU']}" if flavour['CPU']
-                    xaas << "DISK=[SIZE=\"#{flavour['DISK_SIZE']}\"]" if flavour['DISK_SIZE']
-                    xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
-                    xaax << 'MEMORY_RESIZE_MODE="BALLOONING"'
+                        xaas = []
 
-                    if flavour['VCPU']
-                        xaas << "VCPU=#{flavour['VCPU']}"
+                        xaas << "CPU=#{spec_role['CPU']}" if spec_role['CPU']
+                        xaas << "DISK=[SIZE=\"#{spec_role['DISK_SIZE']}\"]" if spec_role['DISK_SIZE']
+                        xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
+                        xaax << 'MEMORY_RESIZE_MODE="BALLOONING"'
 
-                        vcpu_max = flavour['VCPU'].to_i * config_capacity[:max][:vcpu_mult]
-                    else # get upper limit from mult * vm_template_vcpu
-                        vcpu = vm_template['//TEMPLATE/VCPU'].to_i
-                        vcpu = config_capacity[:default][:vcpu] if vcpu.zero?
+                        if spec_role['VCPU']
+                            xaas << "VCPU=#{spec_role['VCPU']}"
 
-                        vcpu_max = vcpu * config_capacity[:max][:vcpu_mult]
+                            vcpu_max = spec_role['VCPU'].to_i * config_capacity[:max][:vcpu_mult]
+                        else # get upper limit from mult * vm_template_vcpu
+                            vcpu = vm_template['//TEMPLATE/VCPU'].to_i
+                            vcpu = config_capacity[:default][:vcpu] if vcpu.zero?
+
+                            vcpu_max = vcpu * config_capacity[:max][:vcpu_mult]
+                        end
+                        if spec_role['MEMORY']
+                            xaas << "MEMORY=#{spec_role['MEMORY']}"
+
+                            memory_max = spec_role['VCPU'].to_i * config_capacity[:max][:memory_mult]
+                        else # get upper limit from mult * vm_template_memory
+                            memory = vm_template['//TEMPLATE/MEMORY'].to_i
+                            memory = config_capacity[:default][:memory] if memory.zero?
+
+                            memory_max = memory * config_capacity[:max][:memory_mult]
+                        end
+
+                        xaas << "VCPU_MAX= \"#{vcpu_max}\""
+                        xaas << "MEMORY_MAX=\"#{memory_max}\""
+
+                        merge_template['roles'] << {
+                            'name' => role,
+                            'vm_template_contents' => xaas.join("\n")
+                        }
+
                     end
-                    if flavour['MEMORY']
-                        xaas << "MEMORY=#{flavour['MEMORY']}"
-
-                        memory_max = flavour['VCPU'].to_i * config_capacity[:max][:memory_mult]
-                    else # get upper limit from mult * vm_template_memory
-                        memory = vm_template['//TEMPLATE/MEMORY'].to_i
-                        memory = config_capacity[:default][:memory] if memory.zero?
-
-                        memory_max = memory * config_capacity[:max][:memory_mult]
-                    end
-
-                    xaas << "VCPU_MAX= \"#{vcpu_max}\""
-                    xaas << "MEMORY_MAX=\"#{memory_max}\""
-
-                    merge_template['roles'] << {
-                        'name' => role,
-                        'vm_template_contents' => xaas.join("\n")
-                    }
                 end
 
                 return client.service_template_instantiate(service_template_id, merge_template)
