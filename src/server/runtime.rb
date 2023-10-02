@@ -311,12 +311,67 @@ module ProvisionEngine
             tuple = ServerlessRuntime.tuple(specification)
 
             service_templates.each do |service_template|
-                next unless service_template['TEMPLATE']['BODY']['name'] == tuple
+                service_template_body = service_template['TEMPLATE']['BODY']
+                # find flow_template matching flavour tuple
+                next unless service_template_body['name'] == tuple
 
-                id = service_template['ID']
-                options = ServerlessRuntime.vm_requirements(specification)
+                service_template_id = service_template['ID']
+                config_capacity = client.conf[:capacity]
 
-                return client.service_template_instantiate(id, options)
+                merge_template = {
+                    'roles' => []
+                }
+
+                # establish custom role vm requirements from runtime specification
+                ['FAAS', 'DAAS'].each do |role|
+                    flavour = specification[role]
+                    next unless flavour
+
+                    # get vm_template capacity in case is needed for capacity reference
+                    role_vm_template_id = service_template_body[role]['vm_template']
+                    response = client.vm_template_get(role_vm_template_id)
+                    return response unless response[0] == 200
+
+                    vm_template = response[1]
+
+                    xaas = []
+
+                    xaas << "CPU=#{flavour['CPU']}" if flavour['CPU']
+                    xaas << "DISK=[SIZE=\"#{flavour['DISK_SIZE']}\"]" if flavour['DISK_SIZE']
+                    xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
+                    xaax << 'MEMORY_RESIZE_MODE="BALLOONING"'
+
+                    if flavour['VCPU']
+                        xaas << "VCPU=#{flavour['VCPU']}"
+
+                        vcpu_max = flavour['VCPU'].to_i * config_capacity[:max][:vcpu_mult]
+                    else # get upper limit from mult * vm_template_vcpu
+                        vcpu = vm_template['//TEMPLATE/VCPU'].to_i
+                        vcpu = config_capacity[:default][:vcpu] if vcpu.zero?
+
+                        vcpu_max = vcpu * config_capacity[:max][:vcpu_mult]
+                    end
+                    if flavour['MEMORY']
+                        xaas << "MEMORY=#{flavour['MEMORY']}"
+
+                        memory_max = flavour['VCPU'].to_i * config_capacity[:max][:memory_mult]
+                    else # get upper limit from mult * vm_template_memory
+                        memory = vm_template['//TEMPLATE/MEMORY'].to_i
+                        memory = config_capacity[:default][:memory] if memory.zero?
+
+                        memory_max = memory * config_capacity[:max][:memory_mult]
+                    end
+
+                    xaas << "VCPU_MAX= \"#{vcpu_max}\""
+                    xaas << "MEMORY_MAX=\"#{memory_max}\""
+
+                    merge_template['roles'] << {
+                        'name' => role,
+                        'vm_template_contents' => xaas.join("\n")
+                    }
+                end
+
+                return client.service_template_instantiate(service_template_id, merge_template)
             end
 
             msg = "Cannot find a valid service template for the specified flavours: #{tuple}\n"
@@ -330,33 +385,6 @@ module ProvisionEngine
             tuple = specification['FAAS']['FLAVOUR']
             tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
             tuple
-        end
-
-        def self.vm_requirements(specification)
-            merge_template = {
-                'roles' => []
-            }
-
-            ['FAAS', 'DAAS'].each do |role|
-                rr = specification[role]
-
-                next unless rr
-
-                xaas = []
-
-                # TODO: Live resize
-                xaas << "CPU=#{rr['CPU']}" if rr['CPU']
-                xaas << "VCPU=#{rr['VCPU']}" if rr['VCPU']
-                xaas << "MEMORY=#{rr['MEMORY']}" if rr['MEMORY']
-                xaas << "DISK=[SIZE=\"#{rr['DISK_SIZE']}\"]" if rr['DISK_SIZE']
-
-                merge_template['roles'] << {
-                    'name' => role,
-                    'vm_template_contents' => xaas.join("\n")
-                }
-            end
-
-            merge_template
         end
 
         #

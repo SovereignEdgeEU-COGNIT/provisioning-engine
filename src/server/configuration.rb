@@ -9,7 +9,17 @@ module ProvisionEngine
             :one_xmlrpc => 'http://localhost:2633/RPC2',
             :oneflow_server => 'http://localhost:2474',
             :host => '127.0.0.1',
-            :port => 2719,
+            :port => 1337,
+            :capacity => {
+                :max => {
+                    :vcpu_mult => 2,
+                    :memory_mult => 2
+                },
+                :default => {
+                    :vcpu => 2,
+                    :memory => 1024
+                }
+            },
             :log => {
                 :level => 2,
                 :system => 'file'

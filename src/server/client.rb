@@ -71,6 +71,18 @@ module ProvisionEngine
             vm.terminate(options[:hard])
         end
 
+        def vm_template_get(id)
+            template = OpenNebula::Template.new_with_id(id, @client_oned)
+
+            response = template.info
+            if OpenNebula.is_error?(response)
+                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
+                        response.message]
+            end
+
+            [200, template]
+        end
+
         #############
         # oneflow
         #############
