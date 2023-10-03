@@ -129,7 +129,7 @@ module ProvisionEngine
 
             runtime.info
 
-            [201, runtime.to_sr]
+            [201, runtime]
         end
 
         def self.get(client, id)
@@ -146,7 +146,7 @@ module ProvisionEngine
             ServerlessRuntime.service_sync(client, runtime.body, service_id)
             runtime.update
 
-            [200, runtime.to_sr]
+            [200, runtime]
         end
 
         def delete
