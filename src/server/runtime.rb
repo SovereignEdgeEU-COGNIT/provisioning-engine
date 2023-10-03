@@ -128,7 +128,8 @@ module ProvisionEngine
             client.logger.info("Created #{SR} Document")
 
             runtime.info
-            [201, runtime]
+
+            [201, runtime.to_sr]
         end
 
         def self.get(client, id)
@@ -145,7 +146,7 @@ module ProvisionEngine
             ServerlessRuntime.service_sync(client, runtime.body, service_id)
             runtime.update
 
-            [200, runtime]
+            [200, runtime.to_sr]
         end
 
         def delete
@@ -197,6 +198,27 @@ module ProvisionEngine
         #################
         # Helpers
         #################
+
+        #
+        # Translates the Serverless Runtime document to the SCHEMA
+        #
+        # @return [Hash] Serverless Runtime definition
+        #
+        def to_sr
+            load_body if @body.nil?
+
+            runtime = {
+                :SERVERLESS_RUNTIME => {
+                    :NAME => name,
+                    :ID => id
+                }
+            }
+
+            runtime[:SERVERLESS_RUNTIME].merge!(@body)
+            runtime[:SERVERLESS_RUNTIME].delete('registration_time')
+
+            runtime
+        end
 
         #
         # Updates Serverless Runtime Document specification based on the underlying elements state
