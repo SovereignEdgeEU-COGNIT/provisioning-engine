@@ -20,6 +20,9 @@ module ProvisionEngine
                     :ID => {
                         :type => 'integer'
                     },
+                    :SERVICE_ID => {
+                        :type => 'integer'
+                    },
                     :FAAS => {
                         :type => 'object',
                     :properties => {
@@ -214,9 +217,10 @@ module ProvisionEngine
                 }
             }
             rsr = runtime[:SERVERLESS_RUNTIME]
-
             rsr.merge!(@body)
+
             rsr.delete('registration_time')
+            rsr['SERVICE_ID'] = rsr['SERVICE_ID'].to_i
 
             ['FAAS', 'DAAS'].each do |role|
                 next unless rsr[role]
