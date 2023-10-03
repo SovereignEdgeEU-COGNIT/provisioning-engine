@@ -36,23 +36,30 @@ module ProvisionEngine
                     :required => ['FLAVOUR']
                     },
                     :DAAS => {
-                        :type => 'object',
-                    :properties => {
-                        :CPU => {
-                            :type => 'integer'
-                        },
-                        :MEMORY => {
-                            :type => 'integer'
-                        },
-                        :DISK_SIZE => {
-                            :type => 'integer'
-                        },
-                        :FLAVOUR => {
-                            :type => 'string'
-                        }
-                    },
-                    :required => ['FLAVOUR']
-                    },
+                       'oneOf' => [
+                         {
+                           :type => 'object',
+                           :properties => {
+                             :CPU => {
+                               :type => 'integer'
+                             },
+                             :MEMORY => {
+                               :type => 'integer'
+                             },
+                             :DISK_SIZE => {
+                               :type => 'integer'
+                             },
+                             :FLAVOUR => {
+                               :type => 'string'
+                             }
+                           },
+                           :required => ['FLAVOUR']
+                         },
+                         {
+                           :type =>  'null'
+                         }
+                       ]
+                     },
                     :SCHEDULING => {
                         :type => 'object',
                     :properties => {
