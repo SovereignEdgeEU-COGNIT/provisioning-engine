@@ -17,6 +17,9 @@ module ProvisionEngine
                     :NAME => {
                         :type => 'string'
                     },
+                    :ID => {
+                        :type => 'integer'
+                    },
                     :FAAS => {
                         :type => 'object',
                     :properties => {
@@ -36,30 +39,30 @@ module ProvisionEngine
                     :required => ['FLAVOUR']
                     },
                     :DAAS => {
-                       'oneOf' => [
-                         {
-                           :type => 'object',
-                           :properties => {
-                             :CPU => {
-                               :type => 'integer'
-                             },
-                             :MEMORY => {
-                               :type => 'integer'
-                             },
-                             :DISK_SIZE => {
-                               :type => 'integer'
-                             },
-                             :FLAVOUR => {
-                               :type => 'string'
-                             }
-                           },
-                           :required => ['FLAVOUR']
-                         },
-                         {
-                           :type =>  'null'
-                         }
-                       ]
-                     },
+                        'oneOf' => [
+                            {
+                                :type => 'object',
+                              :properties => {
+                                  :CPU => {
+                                      :type => 'integer'
+                                  },
+                                :MEMORY => {
+                                    :type => 'integer'
+                                },
+                                :DISK_SIZE => {
+                                    :type => 'integer'
+                                },
+                                :FLAVOUR => {
+                                    :type => 'string'
+                                }
+                              },
+                              :required => ['FLAVOUR']
+                            },
+                            {
+                                :type =>  'null'
+                            }
+                        ]
+                    },
                     :SCHEDULING => {
                         :type => 'object',
                     :properties => {
