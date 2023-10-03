@@ -213,9 +213,22 @@ module ProvisionEngine
                     :ID => id
                 }
             }
+            rsr = runtime[:SERVERLESS_RUNTIME]
 
-            runtime[:SERVERLESS_RUNTIME].merge!(@body)
-            runtime[:SERVERLESS_RUNTIME].delete('registration_time')
+            rsr.merge!(@body)
+            rsr.delete('registration_time')
+
+            ['FAAS', 'DAAS'].each do |role|
+                next unless rsr[role]
+
+                ['MEMORY', 'DISK_SIZE'].each do |param|
+                    rsr[role][param] = rsr[role][param].to_i
+                end
+
+                ['CPU'].each do |param|
+                    rsr[role][param] = rsr[role][param].to_f
+                end
+            end
 
             runtime
         end
