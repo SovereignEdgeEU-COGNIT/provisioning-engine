@@ -38,13 +38,12 @@ describe 'Provision Engine API' do
 
         expect(response.code.to_i).to eq(201)
 
-        document = JSON.parse(response.body)
-        pp document
+        runtime = JSON.parse(response.body)
+        pp runtime
 
-        id = document['DOCUMENT']['ID'].to_i
-        body = runtime_body(document)
+        id = runtime['SERVERLESS_RUNTIME']['ID'].to_i
 
-        validation = ProvisionEngine::ServerlessRuntime.validate(body)
+        validation = ProvisionEngine::ServerlessRuntime.validate(runtime)
         pp validation[1]
 
         expect(validation[0]).to be(true)
@@ -61,13 +60,11 @@ describe 'Provision Engine API' do
 
             expect(response.code.to_i).to eq(200)
 
-            document = JSON.parse(response.body)
-            pp document
-
-            body = runtime_body(document)
+            runtime = JSON.parse(response.body)
+            pp runtime
 
             # Even though the VM reaches RUNNING, the service might not
-            next unless body['FAAS']['STATE'] == 'ACTIVE'
+            next unless runtime['SERVERLESS_RUNTIME']['FAAS']['STATE'] == 'ACTIVE'
 
             break
         end
@@ -101,8 +98,4 @@ describe 'Provision Engine API' do
             break
         end
     end
-end
-
-def runtime_body(document)
-    document['DOCUMENT']['TEMPLATE']['BODY']
 end
