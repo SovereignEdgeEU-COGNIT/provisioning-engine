@@ -98,4 +98,14 @@ describe 'Provision Engine API' do
             break
         end
     end
+
+    it 'prints every log' do
+        logcation = '/var/log/provision-engine'
+
+        pp '-----------------------------------'
+        pp File.read("#{logcation}/engine.log")
+        pp '-----------------------------------'
+        pp File.read("#{logcation}/api.log")
+        pp '-----------------------------------'
+    end
 end
