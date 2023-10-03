@@ -24,7 +24,7 @@ module ProvisionEngine
                         :type => 'object',
                     :properties => {
                         :CPU => {
-                            :type => 'integer'
+                            :type => 'number'
                         },
                         :MEMORY => {
                             :type => 'integer'
@@ -44,7 +44,7 @@ module ProvisionEngine
                                 :type => 'object',
                               :properties => {
                                   :CPU => {
-                                      :type => 'integer'
+                                      :type => 'number'
                                   },
                                 :MEMORY => {
                                     :type => 'integer'
