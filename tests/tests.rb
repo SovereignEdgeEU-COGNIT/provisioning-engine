@@ -101,11 +101,12 @@ describe 'Provision Engine API' do
 
     it 'prints every log' do
         logcation = '/var/log/provision-engine'
+        sep = '-----------------------------------'
+        log_files = ['engine', 'api', 'CloudClient']
 
-        pp '-----------------------------------'
-        pp File.read("#{logcation}/engine.log")
-        pp '-----------------------------------'
-        pp File.read("#{logcation}/api.log")
-        pp '-----------------------------------'
+        log_files.each do |log_file|
+            pp File.read("#{logcation}/#{log_file}.log")
+            pp sep
+        end
     end
 end
