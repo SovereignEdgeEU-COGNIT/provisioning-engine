@@ -20,6 +20,7 @@ def configure_engine(oned, oneflow)
     # Update the values
     config[:one_xmlrpc] = oned if oned
     config[:oneflow_server] = oneflow if oneflow
+    config[:log][:level] = 0
 
     tempfile = Tempfile.new('engine.conf')
     tempfile.write(config)

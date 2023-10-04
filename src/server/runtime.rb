@@ -17,11 +17,17 @@ module ProvisionEngine
                     :NAME => {
                         :type => 'string'
                     },
+                    :ID => {
+                        :type => 'integer'
+                    },
+                    :SERVICE_ID => {
+                        :type => 'integer'
+                    },
                     :FAAS => {
                         :type => 'object',
                     :properties => {
                         :CPU => {
-                            :type => 'integer'
+                            :type => 'number'
                         },
                         :MEMORY => {
                             :type => 'integer'
@@ -36,30 +42,30 @@ module ProvisionEngine
                     :required => ['FLAVOUR']
                     },
                     :DAAS => {
-                       'oneOf' => [
-                         {
-                           :type => 'object',
-                           :properties => {
-                             :CPU => {
-                               :type => 'integer'
-                             },
-                             :MEMORY => {
-                               :type => 'integer'
-                             },
-                             :DISK_SIZE => {
-                               :type => 'integer'
-                             },
-                             :FLAVOUR => {
-                               :type => 'string'
-                             }
-                           },
-                           :required => ['FLAVOUR']
-                         },
-                         {
-                           :type =>  'null'
-                         }
-                       ]
-                     },
+                        'oneOf' => [
+                            {
+                                :type => 'object',
+                              :properties => {
+                                  :CPU => {
+                                      :type => 'number'
+                                  },
+                                :MEMORY => {
+                                    :type => 'integer'
+                                },
+                                :DISK_SIZE => {
+                                    :type => 'integer'
+                                },
+                                :FLAVOUR => {
+                                    :type => 'string'
+                                }
+                              },
+                              :required => ['FLAVOUR']
+                            },
+                            {
+                                :type =>  'null'
+                            }
+                        ]
+                    },
                     :SCHEDULING => {
                         :type => 'object',
                     :properties => {
@@ -125,6 +131,7 @@ module ProvisionEngine
             client.logger.info("Created #{SR} Document")
 
             runtime.info
+
             [201, runtime]
         end
 
@@ -194,6 +201,41 @@ module ProvisionEngine
         #################
         # Helpers
         #################
+
+        #
+        # Translates the Serverless Runtime document to the SCHEMA
+        #
+        # @return [Hash] Serverless Runtime definition
+        #
+        def to_sr
+            load_body if @body.nil?
+
+            runtime = {
+                :SERVERLESS_RUNTIME => {
+                    :NAME => name,
+                    :ID => id
+                }
+            }
+            rsr = runtime[:SERVERLESS_RUNTIME]
+            rsr.merge!(@body)
+
+            rsr.delete('registration_time')
+            rsr['SERVICE_ID'] = rsr['SERVICE_ID'].to_i
+
+            ['FAAS', 'DAAS'].each do |role|
+                next unless rsr[role]
+
+                ['MEMORY', 'DISK_SIZE'].each do |param|
+                    rsr[role][param] = rsr[role][param].to_i
+                end
+
+                ['CPU'].each do |param|
+                    rsr[role][param] = rsr[role][param].to_f
+                end
+            end
+
+            runtime
+        end
 
         #
         # Updates Serverless Runtime Document specification based on the underlying elements state

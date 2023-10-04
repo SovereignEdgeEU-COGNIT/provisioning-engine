@@ -5,13 +5,13 @@
       "CPU": 1,
       "MEMORY": 128,
       "DISK_SIZE": 1024,
-      "FLAVOUR": "nature"
+      "FLAVOUR": "Function"
     },
     "DAAS": {
       "CPU": 1,
       "MEMORY": 128,
       "DISK_SIZE": 1024,
-      "FLAVOUR": "s3"
+      "FLAVOUR": "Data"
     },
     "SCHEDULING": {},
     "DEVICE_INFO": {}

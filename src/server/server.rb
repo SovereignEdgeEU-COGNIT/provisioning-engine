@@ -134,7 +134,7 @@ post '/serverless-runtimes' do
     case rc
     when 201
         log_response('info', rc, rb, "#{SR} created")
-        json_response(rc, rb)
+        json_response(rc, rb.to_sr)
     when 400
         log_response('error', rc, rb, "Invalid #{SRD}")
         halt rc, json_response(rc, rb)
@@ -171,7 +171,7 @@ get '/serverless-runtimes/:id' do
     case rc
     when 200
         log_response('info', rc, rb, SR)
-        json_response(rc, rb)
+        json_response(rc, rb.to_sr)
     when 401
         log_response('error', rc, rb, NO_AUTH)
         halt rc, json_response(rc, rb)
