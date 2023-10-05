@@ -6,6 +6,8 @@ module ProvisionEngine
     class ServerlessRuntime < OpenNebula::DocumentJSON
 
         SR = 'Serverless Runtime'.freeze
+        CVMR = 'Custom VM Requirements'.freeze
+
         DOCUMENT_TYPE = 1337
 
         SCHEMA_SPECIFICATION = {
@@ -322,14 +324,14 @@ module ProvisionEngine
                     'roles' => []
                 }
 
-                # establish custom role vm requirements from runtime specification
                 ['FAAS', 'DAAS'].each do |role|
-                    spec_role = specification[role]
-                    next unless spec_role
+                    next unless specification[role]
+
+                    client.logger.debug("Requesting #{CVMR} for function #{role}\n#{specification[role]}")
 
                     # get vm_template capacity in case is needed for capacity reference
-                    service_template_body['roles'].each do |template_role|
-                        next unless template_role == spec_role
+                    service_template_body['roles'].each do |service_template_role|
+                        next unless service_template_role['name'] == role
 
                         response = client.vm_template_get(role['vm_template'])
                         return response unless response[0] == 200
@@ -338,25 +340,25 @@ module ProvisionEngine
 
                         xaas = []
 
-                        xaas << "CPU=#{spec_role['CPU']}" if spec_role['CPU']
-                        xaas << "DISK=[SIZE=\"#{spec_role['DISK_SIZE']}\"]" if spec_role['DISK_SIZE']
+                        xaas << "CPU=#{specification[role]['CPU']}" if specification[role]['CPU']
+                        xaas << "DISK=[SIZE=\"#{specification[role]['DISK_SIZE']}\"]" if specification[role]['DISK_SIZE']
                         xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
-                        xaax << 'MEMORY_RESIZE_MODE="BALLOONING"'
+                        xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
 
-                        if spec_role['VCPU']
-                            xaas << "VCPU=#{spec_role['VCPU']}"
+                        if specification[role]['VCPU']
+                            xaas << "VCPU=#{specification[role]['VCPU']}"
 
-                            vcpu_max = spec_role['VCPU'].to_i * config_capacity[:max][:vcpu_mult]
+                            vcpu_max = specification[role]['VCPU'].to_i * config_capacity[:max][:vcpu_mult]
                         else # get upper limit from mult * vm_template_vcpu
                             vcpu = vm_template['//TEMPLATE/VCPU'].to_i
                             vcpu = config_capacity[:default][:vcpu] if vcpu.zero?
 
                             vcpu_max = vcpu * config_capacity[:max][:vcpu_mult]
                         end
-                        if spec_role['MEMORY']
-                            xaas << "MEMORY=#{spec_role['MEMORY']}"
+                        if specification[role]['MEMORY']
+                            xaas << "MEMORY=#{specification[role]['MEMORY']}"
 
-                            memory_max = spec_role['VCPU'].to_i * config_capacity[:max][:memory_mult]
+                            memory_max = specification[role]['VCPU'].to_i * config_capacity[:max][:memory_mult]
                         else # get upper limit from mult * vm_template_memory
                             memory = vm_template['//TEMPLATE/MEMORY'].to_i
                             memory = config_capacity[:default][:memory] if memory.zero?
@@ -367,11 +369,12 @@ module ProvisionEngine
                         xaas << "VCPU_MAX= \"#{vcpu_max}\""
                         xaas << "MEMORY_MAX=\"#{memory_max}\""
 
+                        client.logger.debug("Aplying #{CVMR} to function #{role}:\n#{xaas}")
+
                         merge_template['roles'] << {
                             'name' => role,
                             'vm_template_contents' => xaas.join("\n")
                         }
-
                     end
                 end
 
@@ -400,8 +403,6 @@ module ProvisionEngine
         # @return [Hash] Function hash
         #
         def self.xaas_template(client, role)
-            xaas_template = {}
-
             vm_info = role['nodes'][0]['vm_info']['VM']
             vm_id = vm_info['ID'].to_i
 
@@ -412,17 +413,17 @@ module ProvisionEngine
             return response unless rc == 200
 
             vm = rb
+            xaas_template = {}
+            t = '//TEMPLATE/'
 
-            # rubocop:disable Style/StringLiterals rubocop complains but is needed for ID=0
             xaas_template['VM_ID'] = vm_id
             xaas_template['STATE'] = vm.state_str
-            xaas_template['ENDPOINT'] = vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"]
+            xaas_template['ENDPOINT'] = vm["#{t}NIC[NIC_ID=\"0\"]/IP"]
 
-            xaas_template['CPU'] = vm['//TEMPLATE/CPU'].to_f
-            xaas_template['VCPU'] = vm['//TEMPLATE/VCPU'].to_i
-            xaas_template['MEMORY'] = vm['//TEMPLATE/MEMORY'].to_i
-            xaas_template['DISK_SIZE'] = vm["//TEMPLATE/DISK[DISK_ID=\"0\"]/SIZE"].to_i
-            # rubocop:enable Style/StringLiterals
+            xaas_template['CPU'] = vm["#{t}CPU"].to_f
+            xaas_template['VCPU'] = vm["#{t}VCPU"].to_i
+            xaas_template['MEMORY'] = vm["#{t}MEMORY"].to_i
+            xaas_template['DISK_SIZE'] = vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i
 
             xaas_template
         end

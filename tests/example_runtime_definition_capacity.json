@@ -1,9 +1,11 @@
 {
   "SERVERLESS_RUNTIME": {
-    "NAME": "Example Serverless Runtime",
     "FAAS": {
       "MEMORY": 133,
-      "FLAVOUR": "nature"
+      "CPU": 0.33,
+      "VCPU": 3,
+      "DISK_SIZE": 1337,
+      "FLAVOUR": "Function"
     },
     "SCHEDULING": {},
     "DEVICE_INFO": {}
