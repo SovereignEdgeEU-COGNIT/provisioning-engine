@@ -217,22 +217,9 @@ module ProvisionEngine
                 }
             }
             rsr = runtime[:SERVERLESS_RUNTIME]
+
             rsr.merge!(@body)
-
             rsr.delete('registration_time')
-            rsr['SERVICE_ID'] = rsr['SERVICE_ID'].to_i
-
-            ['FAAS', 'DAAS'].each do |role|
-                next unless rsr[role]
-
-                ['MEMORY', 'DISK_SIZE'].each do |param|
-                    rsr[role][param] = rsr[role][param].to_i
-                end
-
-                ['CPU'].each do |param|
-                    rsr[role][param] = rsr[role][param].to_f
-                end
-            end
 
             runtime
         end
@@ -275,7 +262,7 @@ module ProvisionEngine
 
                 client.logger.debug(service)
 
-                runtime_definition['SERVICE_ID'] = service['DOCUMENT']['ID']
+                runtime_definition['SERVICE_ID'] = service['DOCUMENT']['ID'].to_i
                 runtime_definition['FAAS'].merge!(xaas_template(client, roles[0]))
                 runtime_definition['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
 
@@ -325,7 +312,7 @@ module ProvisionEngine
                 return client.service_template_instantiate(id)
             end
 
-            msg = "Cannot find a valid service template for the specified flavours: #{tuple}"
+            msg = "Cannot find a valid service template for the specified flavours: #{tuple}\n"
             msg << "FaaS -> #{specification['FAAS']}"
             msg << "DaaS -> #{specification['DAAS']}" if specification['DAAS']
 
@@ -348,10 +335,9 @@ module ProvisionEngine
         #
         def self.xaas_template(client, role)
             xaas_template = {}
-            xaas_template['ENDPOINT'] = client.conf[:oneflow_server]
 
             vm_info = role['nodes'][0]['vm_info']['VM']
-            vm_id = vm_info['ID']
+            vm_id = vm_info['ID'].to_i
 
             response = client.vm_get(vm_id)
             rc = response[0]
@@ -361,14 +347,16 @@ module ProvisionEngine
 
             vm = rb
 
-            # consequential parameters
+            # rubocop:disable Style/StringLiterals rubocop complains but is needed for ID=0
             xaas_template['VM_ID'] = vm_id
             xaas_template['STATE'] = vm.state_str
+            xaas_template['ENDPOINT'] = vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"]
 
-            # optional specification parameters
-            xaas_template['CPU'] = vm['//TEMPLATE/CPU']
-            xaas_template['MEMORY'] = vm['//TEMPLATE/MEMORY']
-            xaas_template['DISK_SIZE'] = vm['//TEMPLATE/DISK/SIZE']
+            xaas_template['CPU'] = vm['//TEMPLATE/CPU'].to_f
+            xaas_template['VCPU'] = vm['//TEMPLATE/VCPU'].to_i
+            xaas_template['MEMORY'] = vm['//TEMPLATE/MEMORY'].to_i
+            xaas_template['DISK_SIZE'] = vm["//TEMPLATE/DISK[DISK_ID=\"0\"]/SIZE"].to_i
+            # rubocop:enable Style/StringLiterals
 
             xaas_template
         end
