@@ -341,7 +341,7 @@ module ProvisionEngine
                         xaas = []
 
                         xaas << "CPU=#{specification[role]['CPU']}" if specification[role]['CPU']
-                        xaas << "DISK=[SIZE=\"#{specification[role]['DISK_SIZE']}\"]" if specification[role]['DISK_SIZE']
+                        # xaas << "DISK=[SIZE=\"#{specification[role]['DISK_SIZE']}\"]" if specification[role]['DISK_SIZE']
                         xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
                         xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
 
