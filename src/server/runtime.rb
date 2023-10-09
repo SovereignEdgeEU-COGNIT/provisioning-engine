@@ -336,7 +336,8 @@ module ProvisionEngine
                             return response
                         end
 
-                        override = vm_template_contents(specification[role], response[1], client.conf[:capacity])
+                        override = vm_template_contents(specification[role], response[1],
+                                                        client.conf[:capacity])
                         client.logger.debug("Applying vm_template_contents to role #{role}\n#{override}")
 
                         merge_template['roles'] << {
@@ -407,13 +408,26 @@ module ProvisionEngine
         # @return [String] vm_template contents for a oneflow service template
         #
         def self.vm_template_contents(specification, vm_template, conf_capacity)
+            # def self.vm_template_contents(specification, vm_template, conf_capacity)
+            disk_size = specification['DISK_SIZE']
             xaas = []
 
             xaas << "CPU=#{specification['CPU']}" if specification['CPU']
             xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
             xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
 
-            # xaas << "DISK=[SIZE=\"#{specification['DISK_SIZE']}\"]" if specification['DISK_SIZE']
+            if disk_size
+                disk_template = vm_template.template_like_str('//TEMPLATE/DISK')
+
+                if disk_template.include?('SIZE=')
+                    disk_template.sub!("SIZE=\d+", "SIZE=\"#{disk_size}\"")
+                else
+                    disk_template << "\n#{"SIZE=\"#{disk_size}\""}"
+                end
+
+                disk_template.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
+                xaas << "DISK=[#{disk_template}]"
+            end
 
             if specification['VCPU']
                 xaas << "VCPU=#{specification['VCPU']}"
