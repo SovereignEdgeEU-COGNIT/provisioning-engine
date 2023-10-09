@@ -47,8 +47,8 @@ module ProvisionEngine
 
             response = vm.info
             if OpenNebula.is_error?(response)
-                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
-                        response.message]
+                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                return [rc, response.message]
             end
 
             [200, vm]
@@ -73,13 +73,12 @@ module ProvisionEngine
         end
 
         def vm_template_get(id)
-            id = id.to_i unless id.is_a?(Integer)
             template = OpenNebula::Template.new_with_id(id, @client_oned)
 
             response = template.info
             if OpenNebula.is_error?(response)
-                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
-                        response.message]
+                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                return [rc, response.message]
             end
 
             [200, template]

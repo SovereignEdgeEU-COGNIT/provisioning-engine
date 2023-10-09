@@ -329,7 +329,7 @@ module ProvisionEngine
                     service_template_body['roles'].each do |service_template_role|
                         next unless service_template_role['name'] == role
 
-                        response = client.vm_template_get(role['vm_template'])
+                        response = client.vm_template_get(service_template_role['vm_template'])
 
                         if response[0] != 200
                             client.logger.error("Failed to establish #{CVMR} for #{role}")
