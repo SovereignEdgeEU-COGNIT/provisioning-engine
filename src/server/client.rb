@@ -18,9 +18,9 @@ module ProvisionEngine
             # EXML_RPC_CALL   = 0xF002
 
             case xmlrpc_errno
-            when OpenNebla::Error::EAUTHORIZATION
+            when OpenNebula::Error::EAUTHORIZATION
                 403
-            when OpenNebla::Error::ENO_EXISTS
+            when OpenNebula::Error::ENO_EXISTS
                 404
             else
                 xmlrpc_errno
@@ -42,12 +42,13 @@ module ProvisionEngine
         end
 
         def vm_get(id)
+            id = id.to_i unless id.is_a?(Integer)
             vm = OpenNebula::VirtualMachine.new_with_id(id, @client_oned)
 
             response = vm.info
             if OpenNebula.is_error?(response)
-                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
-                        response.message]
+                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                return [rc, response.message]
             end
 
             [200, vm]
@@ -69,6 +70,18 @@ module ProvisionEngine
 
             vm = response[1]
             vm.terminate(options[:hard])
+        end
+
+        def vm_template_get(id)
+            template = OpenNebula::Template.new_with_id(id, @client_oned)
+
+            response = template.info
+            if OpenNebula.is_error?(response)
+                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                return [rc, response.message]
+            end
+
+            [200, template]
         end
 
         #############

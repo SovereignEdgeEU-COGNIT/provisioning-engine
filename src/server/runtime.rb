@@ -6,6 +6,8 @@ module ProvisionEngine
     class ServerlessRuntime < OpenNebula::DocumentJSON
 
         SR = 'Serverless Runtime'.freeze
+        CVMR = 'Custom VM Requirements'.freeze
+
         DOCUMENT_TYPE = 1337
 
         SCHEMA_SPECIFICATION = {
@@ -29,6 +31,9 @@ module ProvisionEngine
                         :CPU => {
                             :type => 'number'
                         },
+                        :VCPU => {
+                            :type => 'float'
+                        },
                         :MEMORY => {
                             :type => 'integer'
                         },
@@ -48,6 +53,9 @@ module ProvisionEngine
                               :properties => {
                                   :CPU => {
                                       :type => 'number'
+                                  },
+                                  :VCPU => {
+                                      :type => 'integer'
                                   },
                                 :MEMORY => {
                                     :type => 'integer'
@@ -304,12 +312,42 @@ module ProvisionEngine
 
             tuple = ServerlessRuntime.tuple(specification)
 
+            # find flow_template matching flavour tuple
             service_templates.each do |service_template|
-                next unless service_template['TEMPLATE']['BODY']['name'] == tuple
+                service_template_body = service_template['TEMPLATE']['BODY']
+                next unless service_template_body['name'] == tuple
 
-                id = service_template['ID']
+                merge_template = {
+                    'roles' => []
+                }
 
-                return client.service_template_instantiate(id)
+                ['FAAS', 'DAAS'].each do |role|
+                    next unless specification[role]
+
+                    client.logger.info("Requesting #{CVMR} for function #{role}\n#{specification[role]}")
+
+                    service_template_body['roles'].each do |service_template_role|
+                        next unless service_template_role['name'] == role
+
+                        response = client.vm_template_get(service_template_role['vm_template'])
+
+                        if response[0] != 200
+                            client.logger.error("Failed to establish #{CVMR} for #{role}")
+                            return response
+                        end
+
+                        override = vm_template_contents(specification[role], response[1],
+                                                        client.conf[:capacity])
+                        client.logger.debug("Applying vm_template_contents to role #{role}\n#{override}")
+
+                        merge_template['roles'] << {
+                            'name' => role,
+                            'vm_template_contents' => override
+                        }
+                    end
+                end
+
+                return client.service_template_instantiate(service_template['ID'], merge_template)
             end
 
             msg = "Cannot find a valid service template for the specified flavours: #{tuple}\n"
@@ -334,8 +372,6 @@ module ProvisionEngine
         # @return [Hash] Function hash
         #
         def self.xaas_template(client, role)
-            xaas_template = {}
-
             vm_info = role['nodes'][0]['vm_info']['VM']
             vm_id = vm_info['ID'].to_i
 
@@ -346,19 +382,78 @@ module ProvisionEngine
             return response unless rc == 200
 
             vm = rb
+            xaas_template = {}
+            t = '//TEMPLATE/'
 
-            # rubocop:disable Style/StringLiterals rubocop complains but is needed for ID=0
             xaas_template['VM_ID'] = vm_id
             xaas_template['STATE'] = vm.state_str
-            xaas_template['ENDPOINT'] = vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"]
+            xaas_template['ENDPOINT'] = vm["#{t}NIC[NIC_ID=\"0\"]/IP"]
 
-            xaas_template['CPU'] = vm['//TEMPLATE/CPU'].to_f
-            xaas_template['VCPU'] = vm['//TEMPLATE/VCPU'].to_i
-            xaas_template['MEMORY'] = vm['//TEMPLATE/MEMORY'].to_i
-            xaas_template['DISK_SIZE'] = vm["//TEMPLATE/DISK[DISK_ID=\"0\"]/SIZE"].to_i
-            # rubocop:enable Style/StringLiterals
+            xaas_template['CPU'] = vm["#{t}CPU"].to_f
+            xaas_template['VCPU'] = vm["#{t}VCPU"].to_i
+            xaas_template['MEMORY'] = vm["#{t}MEMORY"].to_i
+            xaas_template['DISK_SIZE'] = vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i
 
             xaas_template
+        end
+
+        #
+        # Creates information compatible with oneflow vm_template contents for a given
+        # role in a Serverless Runtime specification
+        #
+        # @param [Hash] specification Function specification found in Serverless Runtime definition
+        # @param [OpenNebula::Template] vm_template Function baseline VM template
+        # @param [Hash] conf_capacity Engine configuration attribute for max capacity assumptions
+        #
+        # @return [String] vm_template contents for a oneflow service template
+        #
+        def self.vm_template_contents(specification, vm_template, conf_capacity)
+            # def self.vm_template_contents(specification, vm_template, conf_capacity)
+            disk_size = specification['DISK_SIZE']
+            xaas = []
+
+            xaas << "CPU=#{specification['CPU']}" if specification['CPU']
+            xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
+            xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
+
+            if disk_size
+                disk_template = vm_template.template_like_str('//TEMPLATE/DISK')
+
+                if disk_template.include?('SIZE=')
+                    disk_template.sub!("SIZE=\d+", "SIZE=\"#{disk_size}\"")
+                else
+                    disk_template << "\n#{"SIZE=\"#{disk_size}\""}"
+                end
+
+                disk_template.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
+                xaas << "DISK=[#{disk_template}]"
+            end
+
+            if specification['VCPU']
+                xaas << "VCPU=#{specification['VCPU']}"
+
+                vcpu_max = specification['VCPU'] * conf_capacity[:max][:vcpu_mult]
+            else # get upper limit from mult * vm_template_vcpu
+                vcpu = vm_template['//TEMPLATE/VCPU'].to_i
+                vcpu = conf_capacity[:default][:vcpu] if vcpu.zero?
+
+                vcpu_max = vcpu * conf_capacity[:max][:vcpu_mult]
+            end
+            if specification['MEMORY']
+                xaas << "MEMORY=#{specification['MEMORY']}"
+
+                memory_max = specification['MEMORY'] * conf_capacity[:max][:memory_mult]
+            else # get upper limit from mult * vm_template_memory
+                memory = vm_template['//TEMPLATE/MEMORY'].to_i
+                memory = conf_capacity[:default][:memory] if memory.zero?
+
+                memory_max = memory * conf_capacity[:max][:memory_mult]
+            end
+
+            xaas << "VCPU_MAX= \"#{vcpu_max}\""
+            xaas << "MEMORY_MAX=\"#{memory_max}\""
+
+            xaas.join("\n")
         end
 
     end

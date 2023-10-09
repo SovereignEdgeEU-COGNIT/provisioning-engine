@@ -17,7 +17,6 @@ end
 def configure_engine(oned, oneflow)
     config = YAML.load_file(CONF_PATH)
 
-    # Update the values
     config[:one_xmlrpc] = oned if oned
     config[:oneflow_server] = oneflow if oneflow
     config[:log][:level] = 0
@@ -26,7 +25,6 @@ def configure_engine(oned, oneflow)
     tempfile.write(config)
     tempfile.flush
 
-    # Write back to the file
     File.open(tempfile, 'w') do |f|
         f.write(config.to_yaml)
     end

@@ -1,0 +1,13 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "FAAS": {
+      "MEMORY": 133,
+      "CPU": 0.33,
+      "VCPU": 3,
+      "DISK_SIZE": 1337,
+      "FLAVOUR": "Function"
+    },
+    "SCHEDULING": {},
+    "DEVICE_INFO": {}
+  }
+}
