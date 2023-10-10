@@ -1,7 +1,5 @@
 #!/usr/bin/env ruby
 
-$LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
-
 # Standard library
 require 'json'
 require 'yaml'
@@ -17,6 +15,7 @@ require 'json-schema'
 require 'opennebula'
 require 'opennebula/oneflow_client'
 
+$LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
 # Engine libraries
 require 'log'
 require 'configuration'
@@ -211,11 +210,8 @@ delete '/serverless-runtimes/:id' do
 
     auth = auth?
 
-    id = params[:id].to_i
-
     client = ProvisionEngine::CloudClient.new(conf, auth)
-
-    # Obtain serverless runtime
+    id = params[:id].to_i
 
     response = ProvisionEngine::ServerlessRuntime.get(client, id)
     rc = response[0]

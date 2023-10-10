@@ -2,35 +2,37 @@
 
 # How to use: See ./github/workflows/rspec.yml
 
+# Standard library
 require 'json'
 require 'yaml'
+
+# Gems
 require 'rspec'
 require 'rack/test'
 
-# Serverless Runtime libary requirements
+# Engine libraries
 require 'opennebula'
 require 'json-schema'
-
 require_relative '../src/client/client'
 require_relative '../src/server/runtime'
 
 SR = 'Serverless Runtime'
 
-conf_engine = YAML.load_file('/etc/provision-engine/engine.conf')
-endpoint = "http://#{conf_engine[:host]}:#{conf_engine[:port]}"
+conf = {}
+conf[:engine] = YAML.load_file('/etc/provision-engine/engine.conf')
+conf[:tests] = YAML.load_file('./conf.yaml')
 
-conf_tests = YAML.load_file('./conf.yaml')
+endpoint = "http://#{conf[:engine][:host]}:#{conf[:engine][:port]}"
 auth = ENV['TESTS_AUTH'] || 'oneadmin:opennebula'
-
 engine_client = ProvisionEngine::Client.new(endpoint, auth)
 
-id = nil
+dyn = {} # example specific information
 
 describe 'Provision Engine API' do
     include Rack::Test::Methods
 
     it "should create a #{SR} with a minimal specification" do
-        file_path = 'example_runtime_definition_minimal.json'
+        file_path = 'templates/sr_minimal.json'
         specification = File.read(file_path)
         specification = JSON.parse(specification)
 
@@ -41,7 +43,7 @@ describe 'Provision Engine API' do
         runtime = JSON.parse(response.body)
         pp runtime
 
-        id = runtime['SERVERLESS_RUNTIME']['ID'].to_i
+        dyn[:id] = runtime['SERVERLESS_RUNTIME']['ID'].to_i
 
         validation = ProvisionEngine::ServerlessRuntime.validate(runtime)
         pp validation[1]
@@ -50,13 +52,13 @@ describe 'Provision Engine API' do
     end
 
     it "should get #{SR} info" do
-        attempts = conf_tests[:timeouts][:get]
+        attempts = conf[:tests][:timeouts][:get]
 
         1.upto(attempts) do |t|
             sleep 1
             expect(t == attempts).to be(false)
 
-            response = engine_client.get(id)
+            response = engine_client.get(dyn[:id])
 
             expect(response.code.to_i).to eq(200)
 
@@ -71,7 +73,7 @@ describe 'Provision Engine API' do
     end
 
     it "should get #{SR} update not implemented" do
-        response = engine_client.update(id, {})
+        response = engine_client.update(dyn[:id], {})
 
         expect(response.code.to_i).to eq(501)
 
@@ -82,13 +84,13 @@ describe 'Provision Engine API' do
     end
 
     it "should delete a #{SR}" do
-        attempts = conf_tests[:timeouts][:get]
+        attempts = conf[:tests][:timeouts][:get]
 
         1.upto(attempts) do |t|
             sleep 1
             expect(t == attempts).to be(false)
 
-            response = engine_client.delete(id)
+            response = engine_client.delete(dyn[:id])
             rc = response.code.to_i
 
             next unless rc == 204

@@ -69,7 +69,7 @@ modules="client.rb configuration.rb log.rb server.rb runtime.rb"
 gems=("opennebula" "sinatra" "logger" "json-schema") # check requires on server.rb
 
 action="${1:-"install"}"
-setup_mode="${2:-"symlink"}" # TODO: change to copy once is production ready
+setup_mode="${2:-"symlink"}"
 
 if [ "$action" = "clean" ]; then
 	clean
