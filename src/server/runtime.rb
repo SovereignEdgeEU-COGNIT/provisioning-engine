@@ -149,6 +149,7 @@ module ProvisionEngine
 
             runtime.cclient = client
 
+            # DocumentJSON.info doesn't have error code
             return [404, 'Document not found'] if runtime.name.nil?
 
             runtime.load_body
