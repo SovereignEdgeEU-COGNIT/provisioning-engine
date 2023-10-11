@@ -1,6 +1,15 @@
 require 'net/http'
 require 'uri'
 
+# To avoid conversions of status code str to int
+class HTTPResponseCodeInt < SimpleDelegator
+
+    def code
+        super.to_i
+    end
+
+end
+
 module ProvisionEngine
 
     #
@@ -67,7 +76,7 @@ module ProvisionEngine
         def do_request(request, uri)
             request.basic_auth(@user, @pass)
             http = Net::HTTP.new(uri.host, uri.port)
-            http.request(request)
+            HTTPResponseCodeInt.new(http.request(request))
         end
 
     end
