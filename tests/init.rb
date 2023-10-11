@@ -35,18 +35,22 @@ rspec = {
     :sr_templates => []
 }
 
+def examples?(examples, conf, params = nil)
+    include_context(examples, params) if conf[:examples][examples]
+end
+
 describe 'Provision Engine API' do
     include Rack::Test::Methods
-
     let(:rspec) { rspec }
+    examples?('auth', rspec[:conf])
 
-    # test every serverless runtime template available under template directory
+    # test every serverless runtime template under templates directory
     Dir.entries("#{__dir__}/templates").select do |sr_template|
         # blacklist template from tests by changing preffix or suffix
         next unless sr_template.start_with?('sr_') && sr_template.end_with?('.json')
 
-        include_context('crud', sr_template)
+        examples?('crud', rspec[:conf], sr_template)
     end
 
-    include_context('inspect logs')
+    examples?('inspect logs', rspec[:conf])
 end
