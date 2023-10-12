@@ -5,6 +5,7 @@
 # Standard library
 require 'json'
 require 'yaml'
+require 'securerandom'
 
 # Gems
 require 'rspec'
@@ -20,10 +21,13 @@ $LOAD_PATH << "#{__dir__}/lib"
 require 'log'
 require 'crud'
 require 'auth'
+require 'crud_invalid'
 
 SR = 'Serverless Runtime'
 
-# Initialize Provision Engine ruby client
+############################################################################
+# Initialize rspec configuration
+############################################################################
 conf_engine = YAML.load_file('/etc/provision-engine/engine.conf')
 endpoint = "http://#{conf_engine[:host]}:#{conf_engine[:port]}"
 auth = ENV['TESTS_AUTH'] || 'oneadmin:opennebula'
@@ -35,17 +39,22 @@ rspec_conf = {
     :endpoint => endpoint
 }
 
-def examples?(examples, conf, params = nil)
-    include_context(examples, params) if conf[:examples][examples]
-end
-
-
-# Initialize test configuration
 RSpec.configure do |c|
     c.add_setting :rspec
     c.before { @conf = rspec_conf }
 end
 
+############################################################################
+# RSPEC methods
+############################################################################
+
+def examples?(examples, conf, params = nil)
+    include_context(examples, params) if conf[:examples][examples]
+end
+
+############################################################################
+# Run tests
+############################################################################
 RSpec.describe 'Provision Engine API' do
     include Rack::Test::Methods
 
@@ -67,6 +76,7 @@ RSpec.describe 'Provision Engine API' do
     end
 
     examples?('auth', rspec_conf[:conf])
+    examples?('crud_invalid', rspec_conf[:conf])
 
     # test every serverless runtime template under templates directory
     Dir.entries("#{__dir__}/templates").select do |sr_template|
@@ -77,4 +87,31 @@ RSpec.describe 'Provision Engine API' do
     end
 
     examples?('inspect logs', rspec_conf[:conf])
+end
+
+############################################################################
+# Helpers
+############################################################################
+
+def random_string
+    chars = ('a'..'z').to_a + ('A'..'Z').to_a
+    string = ''
+    8.times { string << chars[SecureRandom.rand(chars.size)] }
+    string
+end
+
+def random_faas_minimal
+    flavour = random_string
+    pp "rolled a random flavour #{flavour}"
+
+    {
+        :SERVERLESS_RUNTIME => {
+            :NAME => flavour,
+            :FAAS => {
+                :FLAVOUR => flavour
+            },
+            :SCHEDULING => {},
+            :DEVICE_INFO => {}
+        }
+    }
 end

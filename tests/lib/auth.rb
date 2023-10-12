@@ -1,7 +1,12 @@
 RSpec.shared_context 'auth' do
+    it 'permission denied on Create' do
+        response = @conf[:engine_client].create(random_faas_minimal)
+        expect([403, 422].include?(response.code)).to be(true)
+    end
+
     it "Creating #{SR} for auth tests requring an existing #{SR}" do
         @conf[:auth] = {}
-        @conf[:auth][:sr_template] = JSON.load_file('templates/sr_minimal.json')
+        @conf[:auth][:sr_template] = JSON.load_file('templates/sr_faas_minimal.json')
         @conf[:auth][:engine_client_no_auth] = ProvisionEngine::Client.new(@conf[:endpoint])
 
         response = @conf[:engine_client].create(@conf[:auth][:sr_template])

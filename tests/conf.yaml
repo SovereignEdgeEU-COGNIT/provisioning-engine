@@ -4,6 +4,7 @@
   :delete: 30
 # What group of examples should be tested
 :examples:
-  'crud': true
-  'inspect logs': true
   'auth': true
+  'crud': true
+  'crud_invalid': true
+  'inspect logs': true

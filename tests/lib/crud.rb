@@ -43,13 +43,7 @@ RSpec.shared_context 'crud' do |sr_template|
         end
     end
 
-    it "not read a non existing #{SR}" do
-        response = @conf[:engine_client].get(@conf[:id]+9001)
-
-        expect(response.code).to eq(404)
-    end
-
-    it "not update #{SR}" do
+    it "fail to update #{SR}" do
         # skip "#{SR} creation failed" unless @conf[:create]
         response = @conf[:engine_client].update(@conf[:id], {})
 
@@ -59,12 +53,6 @@ RSpec.shared_context 'crud' do |sr_template|
         pp body
 
         expect(body).to eq('Serverless Runtime update not implemented')
-    end
-
-    it "not delete a non existing #{SR}" do
-        response = @conf[:engine_client].delete(@conf[:id]+9001)
-
-        expect(response.code).to eq(404)
     end
 
     it "delete a #{SR}" do
