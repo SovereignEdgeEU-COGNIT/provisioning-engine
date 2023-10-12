@@ -50,23 +50,23 @@ module ProvisionEngine
                         'oneOf' => [
                             {
                                 :type => 'object',
-                              :properties => {
-                                  :CPU => {
-                                      :type => 'number'
-                                  },
-                                  :VCPU => {
-                                      :type => 'integer'
-                                  },
-                                :MEMORY => {
-                                    :type => 'integer'
+                                :properties => {
+                                    :CPU => {
+                                        :type => 'number'
+                                    },
+                                    :VCPU => {
+                                        :type => 'integer'
+                                    },
+                                    :MEMORY => {
+                                        :type => 'integer'
+                                    },
+                                    :DISK_SIZE => {
+                                        :type => 'integer'
+                                    },
+                                    :FLAVOUR => {
+                                        :type => 'string'
+                                    }
                                 },
-                                :DISK_SIZE => {
-                                    :type => 'integer'
-                                },
-                                :FLAVOUR => {
-                                    :type => 'string'
-                                }
-                              },
                               :required => ['FLAVOUR']
                             },
                             {
@@ -308,6 +308,11 @@ module ProvisionEngine
             rc = response[0]
 
             return response if rc != 200
+
+            if response[1]['DOCUMENT_POOL'].empty?
+                msg = "User requesting #{SR} creation has no flow templates available for use"
+                return [403, msg]
+            end
 
             service_templates = response[1]['DOCUMENT_POOL']['DOCUMENT']
 
