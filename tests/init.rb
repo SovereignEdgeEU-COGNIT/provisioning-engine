@@ -5,6 +5,7 @@
 # Standard library
 require 'json'
 require 'yaml'
+require 'securerandom'
 
 # Gems
 require 'rspec'
@@ -19,34 +20,98 @@ require_relative '../src/server/runtime'
 $LOAD_PATH << "#{__dir__}/lib"
 require 'log'
 require 'crud'
+require 'auth'
+require 'crud_invalid'
 
 SR = 'Serverless Runtime'
 
-# Initialize Provision Engine ruby client
+############################################################################
+# Initialize rspec configuration
+############################################################################
 conf_engine = YAML.load_file('/etc/provision-engine/engine.conf')
 endpoint = "http://#{conf_engine[:host]}:#{conf_engine[:port]}"
 auth = ENV['TESTS_AUTH'] || 'oneadmin:opennebula'
 engine_client = ProvisionEngine::Client.new(endpoint, auth)
 
-# Initialize test configuration
-rspec = {
+rspec_conf = {
     :conf => YAML.load_file('./conf.yaml'),
     :engine_client => engine_client,
-    :sr_templates => []
+    :endpoint => endpoint
 }
 
-describe 'Provision Engine API' do
+RSpec.configure do |c|
+    c.add_setting :rspec
+    c.before { @conf = rspec_conf }
+end
+
+############################################################################
+# RSPEC methods
+############################################################################
+
+def examples?(examples, conf, params = nil)
+    include_context(examples, params) if conf[:examples][examples]
+end
+
+############################################################################
+# Run tests
+############################################################################
+RSpec.describe 'Provision Engine API' do
     include Rack::Test::Methods
 
-    let(:rspec) { rspec }
+    def wait_delete(sr_id)
+        attempts = @conf[:conf][:timeouts][:get]
+        1.upto(attempts) do |t|
+            sleep 1
+            expect(t == attempts).to be(false)
 
-    # test every serverless runtime template available under template directory
+            response = @conf[:engine_client].delete(sr_id)
+            rc = response.code
+
+            next unless rc == 204
+
+            expect(rc).to eq(204)
+
+            break
+        end
+    end
+
+    examples?('auth', rspec_conf[:conf])
+    examples?('crud_invalid', rspec_conf[:conf])
+
+    # test every serverless runtime template under templates directory
     Dir.entries("#{__dir__}/templates").select do |sr_template|
         # blacklist template from tests by changing preffix or suffix
         next unless sr_template.start_with?('sr_') && sr_template.end_with?('.json')
 
-        include_context('crud', sr_template)
+        examples?('crud', rspec_conf[:conf], sr_template)
     end
 
-    include_context('inspect logs')
+    examples?('inspect logs', rspec_conf[:conf])
+end
+
+############################################################################
+# Helpers
+############################################################################
+
+def random_string
+    chars = ('a'..'z').to_a + ('A'..'Z').to_a
+    string = ''
+    8.times { string << chars[SecureRandom.rand(chars.size)] }
+    string
+end
+
+def random_faas_minimal
+    flavour = random_string
+    pp "rolled a random flavour #{flavour}"
+
+    {
+        :SERVERLESS_RUNTIME => {
+            :NAME => flavour,
+            :FAAS => {
+                :FLAVOUR => flavour
+            },
+            :SCHEDULING => {},
+            :DEVICE_INFO => {}
+        }
+    }
 end

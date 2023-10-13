@@ -111,7 +111,7 @@ settings.logger.info "Using oneflow at #{conf[:oneflow_server]}"
 
 # Log every HTTP Request received
 before do
-    if conf[:log] == 0
+    if conf[:log][:level] == 0
         call = "API Call: #{request.request_method} #{request.fullpath} #{request.body.read}"
         settings.logger.debug(call)
         request.body.rewind

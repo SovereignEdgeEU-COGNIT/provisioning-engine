@@ -1,6 +1,15 @@
 require 'net/http'
 require 'uri'
 
+# To avoid conversions of status code str to int
+class HTTPResponse < SimpleDelegator
+
+    def code
+        super.to_i
+    end
+
+end
+
 module ProvisionEngine
 
     #
@@ -14,17 +23,22 @@ module ProvisionEngine
         # @param [String] endpoint where the engine is running
         # @param [String] credentials in the form of user:pass
         #
-        def initialize(endpoint, auth)
-            uri = URI.parse(endpoint)
-            uri.scheme && uri.host
+        def initialize(endpoint, auth = nil)
+            if auth.nil?
+                @user = nil
+                @pass = nil
+            else
+                unless auth.is_a?(String) && auth.include?(':')
+                    raise 'Invalid auth data type, must be a string like <user>:<password>'
+                end
 
-            if !auth.is_a?(String) && !auth.include?(':')
-                raise 'Invalid auth data type, must be a string like <user>:<password>'
+                @user = auth.split(':')[0]
+                @pass = auth.split(':')[1]
             end
 
+            uri = URI.parse(endpoint)
+            uri.scheme && uri.host
             @endpoint = endpoint
-            @user = auth.split(':')[0]
-            @pass = auth.split(':')[1]
         end
 
         def create(specification)
@@ -65,9 +79,9 @@ module ProvisionEngine
         end
 
         def do_request(request, uri)
-            request.basic_auth(@user, @pass)
+            request.basic_auth(@user, @pass) if @user && @pass
             http = Net::HTTP.new(uri.host, uri.port)
-            http.request(request)
+            HTTPResponse.new(http.request(request))
         end
 
     end

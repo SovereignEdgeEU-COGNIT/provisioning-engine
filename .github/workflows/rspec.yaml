@@ -26,7 +26,7 @@ jobs:
       - name: Start engine
         run: provision-engine-server start && sleep 2
 
-      - name: Run tests
+      - name: Rspec
         run: cd ./tests && rspec init.rb
 
       - name: Stop engine

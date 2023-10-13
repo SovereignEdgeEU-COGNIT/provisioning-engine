@@ -1,0 +1,14 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "NAME": "Function as a Service",
+    "FAAS": {
+      "MEMORY": 111,
+      "CPU": 0.44,
+      "VCPU": 3,
+      "DISK_SIZE": 420,
+      "FLAVOUR": "Function"
+    },
+    "SCHEDULING": {},
+    "DEVICE_INFO": {}
+  }
+}

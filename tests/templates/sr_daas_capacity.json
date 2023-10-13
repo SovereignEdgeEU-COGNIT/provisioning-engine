@@ -1,6 +1,6 @@
 {
   "SERVERLESS_RUNTIME": {
-    "NAME": "Example Serverless Runtime",
+    "NAME": "Function and Data as a Service",
     "FAAS": {
       "CPU": 0.11,
       "VCPU": 2,

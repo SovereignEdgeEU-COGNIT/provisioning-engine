@@ -1,0 +1,10 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "FAAS": {
+      "FLAVOUR": "Function"
+    },
+    "DAAS": null,
+    "SCHEDULING": {},
+    "DEVICE_INFO": {}
+  }
+}

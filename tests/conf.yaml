@@ -1,3 +1,10 @@
+# How long to wait for the operation expected result before raising timeout error
 :timeouts:
-  :get: 120
+  :get: 60
   :delete: 30
+# What group of examples should be tested
+:examples:
+  'auth': true
+  'crud': true
+  'crud_invalid': true
+  'inspect logs': true

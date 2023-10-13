@@ -2,34 +2,36 @@ RSpec.shared_context 'crud' do |sr_template|
     it "create a #{SR}" do
         pp "Requesting #{SR} creation with template #{sr_template}"
 
-        specification = File.read("templates/#{sr_template}")
-        specification = JSON.parse(specification)
+        specification = JSON.load_file("templates/#{sr_template}")
+        response = @conf[:engine_client].create(specification)
 
-        response = rspec[:engine_client].create(specification)
-
-        expect(response.code.to_i).to eq(201)
+        expect(response.code).to eq(201)
 
         runtime = JSON.parse(response.body)
         pp runtime
 
-        rspec[:id] = runtime['SERVERLESS_RUNTIME']['ID'].to_i
+        @conf[:id] = runtime['SERVERLESS_RUNTIME']['ID'].to_i
 
         validation = ProvisionEngine::ServerlessRuntime.validate(runtime)
         pp validation[1]
 
-        expect(validation[0]).to be(true)
+        raise validation[1] unless validation[0]
+
+        @conf[:create] = true
     end
 
     it "read a #{SR}" do
-        attempts = rspec[:conf][:timeouts][:get]
+        skip "#{SR} creation failed" unless @conf[:create]
+
+        attempts = @conf[:conf][:timeouts][:get]
 
         1.upto(attempts) do |t|
             sleep 1
             expect(t == attempts).to be(false)
 
-            response = rspec[:engine_client].get(rspec[:id])
+            response = @conf[:engine_client].get(@conf[:id])
 
-            expect(response.code.to_i).to eq(200)
+            expect(response.code).to eq(200)
 
             runtime = JSON.parse(response.body)
             pp runtime
@@ -41,10 +43,11 @@ RSpec.shared_context 'crud' do |sr_template|
         end
     end
 
-    it "not update #{SR}" do
-        response = rspec[:engine_client].update(rspec[:id], {})
+    it "fail to update #{SR}" do
+        # skip "#{SR} creation failed" unless @conf[:create]
+        response = @conf[:engine_client].update(@conf[:id], {})
 
-        expect(response.code.to_i).to eq(501)
+        expect(response.code).to eq(501)
 
         body = JSON.parse(response.body)
         pp body
@@ -53,20 +56,8 @@ RSpec.shared_context 'crud' do |sr_template|
     end
 
     it "delete a #{SR}" do
-        attempts = rspec[:conf][:timeouts][:get]
+        skip "#{SR} creation failed" unless @conf[:create]
 
-        1.upto(attempts) do |t|
-            sleep 1
-            expect(t == attempts).to be(false)
-
-            response = rspec[:engine_client].delete(rspec[:id])
-            rc = response.code.to_i
-
-            next unless rc == 204
-
-            expect(rc).to eq(204)
-
-            break
-        end
+        wait_delete(@conf[:id])
     end
 end
