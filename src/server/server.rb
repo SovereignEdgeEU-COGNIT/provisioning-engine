@@ -31,6 +31,7 @@ SRD = "#{SR} definition".freeze
 DENIED = 'Permission denied'.freeze
 NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
 SR_NOT_FOUND = "#{SR} not found".freeze
+NO_DELETE = "Failed to delete #{SR}".freeze
 
 # Helper method to return JSON responses
 def json_response(response_code, data)
@@ -232,8 +233,11 @@ delete '/serverless-runtimes/:id' do
         when 403
             log_response('error', rc, rb, DENIED)
             halt rc, json_response(rc, rb)
+        when 423
+            log_response('error', rc, rb, NO_DELETE)
+            halt rc, json_response(rc, rb)
         else
-            log_response('error', rc, rb, "Failed to delete #{SR}")
+            log_response('error', rc, rb, NO_DELETE)
             halt 500, json_response(500, rb)
         end
     when 401
@@ -246,7 +250,7 @@ delete '/serverless-runtimes/:id' do
         log_response('error', rc, rb, SR_NOT_FOUND)
         halt rc, json_response(rc, rb)
     else
-        log_response('error', rc, rb, "Failed to delete #{SR}")
+        log_response('error', rc, rb, NO_DELETE)
         halt 500, json_response(500, rb)
     end
 end

@@ -169,11 +169,15 @@ module ProvisionEngine
             service_id = document['DOCUMENT']['TEMPLATE']['BODY']['SERVICE_ID']
             response = cclient.service_delete(service_id)
             rc = response[0]
+            rb = response[1]
 
-            if rc == 404
-                cclient.logger.warning("Cannot find #{SR} Service")
-            elsif rc != 204
-                rb = response[1]
+            if rc != 204
+                if rc == 404
+                    cclient.logger.warning("Cannot find #{SR} Service")
+                elsif rc == 500 && rb == 'Service cannot be undeployed in state: DEPLOYING'
+                    rc = 423
+                    rb = "#{SR} has not finished deployment"
+                end
                 return [rc, rb]
             end
 
