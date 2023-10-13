@@ -1,22 +1,22 @@
 RSpec.shared_context 'crud_invalid' do
     it "fail to create a #{SR} with invalid FLAVOUR" do
-        response = @conf[:engine_client].create(random_faas_minimal)
+        response = @conf[:client][:engine].create(random_faas_minimal)
         expect(response.code).to eq(422)
     end
 
     it "fail to create a #{SR} with invalid schema" do
         specification = {
-            :SERVERLESS_RUNTIME => {
-                :FAAS => {
-                    :FLAVOUR => 'Function'
+            'SERVERLESS_RUNTIME' => {
+                'FAAS' => {
+                    'FLAVOUR' => 'Function'
                 },
-                :DAAS => {}, # DAAS should be null or have properties
-                :SCHEDULING => {},
-                :DEVICE_INFO => {}
+                'DAAS' => {}, # DAAS should be null or have properties
+                'SCHEDULING' => {},
+                'DEVICE_INFO' => {}
             }
         }
 
-        response = @conf[:engine_client].create(specification)
+        response = @conf[:client][:engine].create(specification)
         expect(response.code).to eq(400)
     end
 
@@ -24,18 +24,18 @@ RSpec.shared_context 'crud_invalid' do
         @conf[:invalid] = {}
         @conf[:invalid][:sky] = 2147483647 # biggest ID for a pool element
 
-        response = @conf[:engine_client].get(@conf[:invalid][:sky])
+        response = @conf[:client][:engine].get(@conf[:invalid][:sky])
         expect(response.code).to eq(404)
     end
 
     it "fail to update a non existing #{SR}" do
-        response = @conf[:engine_client].update(@conf[:invalid][:sky], {})
+        response = @conf[:client][:engine].update(@conf[:invalid][:sky], {})
         expect(response.code).to eq(501)
         # expect(response.code).to eq(404)
     end
 
     it "fail to delete a non existing #{SR}" do
-        response = @conf[:engine_client].delete(@conf[:invalid][:sky])
+        response = @conf[:client][:engine].delete(@conf[:invalid][:sky])
         expect(response.code).to eq(404)
     end
 end

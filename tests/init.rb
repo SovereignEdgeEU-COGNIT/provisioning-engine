@@ -10,14 +10,15 @@ require 'securerandom'
 # Gems
 require 'rspec'
 require 'rack/test'
+require 'json-schema'
+require 'opennebula'
+require 'opennebula/oneflow_client'
 
 # Engine libraries
-require 'opennebula'
-require 'json-schema'
 require_relative '../src/client/client'
 require_relative '../src/server/runtime'
 
-$LOAD_PATH << "#{__dir__}/lib"
+$LOAD_PATH << "#{__dir__}/lib" # Test libraries
 require 'log'
 require 'crud'
 require 'auth'
@@ -31,11 +32,19 @@ SR = 'Serverless Runtime'
 conf_engine = YAML.load_file('/etc/provision-engine/engine.conf')
 endpoint = "http://#{conf_engine[:host]}:#{conf_engine[:port]}"
 auth = ENV['TESTS_AUTH'] || 'oneadmin:opennebula'
-engine_client = ProvisionEngine::Client.new(endpoint, auth)
+flow_client_args = {
+    :url => conf_engine[:oneflow_server],
+    :username => auth.split(':')[0],
+    :password => auth.split(':')[-1]
+}
 
 rspec_conf = {
     :conf => YAML.load_file('./conf.yaml'),
-    :engine_client => engine_client,
+    :client => {
+        :engine => ProvisionEngine::Client.new(endpoint, auth),
+        :oned => OpenNebula::Client.new(auth, conf_engine[:one_xmlrpc]),
+        :oneflow => Service::Client.new(flow_client_args)
+    },
     :endpoint => endpoint
 }
 
@@ -57,23 +66,6 @@ end
 ############################################################################
 RSpec.describe 'Provision Engine API' do
     include Rack::Test::Methods
-
-    def wait_delete(sr_id)
-        attempts = @conf[:conf][:timeouts][:get]
-        1.upto(attempts) do |t|
-            sleep 1
-            expect(t == attempts).to be(false)
-
-            response = @conf[:engine_client].delete(sr_id)
-            rc = response.code
-
-            next unless rc == 204
-
-            expect(rc).to eq(204)
-
-            break
-        end
-    end
 
     examples?('auth', rspec_conf[:conf])
     examples?('crud_invalid', rspec_conf[:conf])
