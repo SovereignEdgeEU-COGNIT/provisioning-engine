@@ -5,7 +5,16 @@ RSpec.shared_context 'auth' do
     end
 
     it 'permission denied on Create vm_template' do
-        specification = JSON.load_file('templates/sr_faas_denyVMTemplate.json')
+        specification = {
+            'SERVERLESS_RUNTIME' => {
+                'FAAS' => {
+                    'FLAVOUR' => 'DenyVMTemplate'
+                },
+                'SCHEDULING' => {},
+                'DEVICE_INFO' => {}
+            }
+        }
+
         response = @conf[:client][:engine].create(specification)
         expect([403, 422].include?(response.code)).to be(true)
     end

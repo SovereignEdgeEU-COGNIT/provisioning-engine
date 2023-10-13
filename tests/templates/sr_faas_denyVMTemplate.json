@@ -1,9 +1,0 @@
-{
-  "SERVERLESS_RUNTIME": {
-    "FAAS": {
-      "FLAVOUR": "DenyVMTemplate"
-    },
-    "SCHEDULING": {},
-    "DEVICE_INFO": {}
-  }
-}
