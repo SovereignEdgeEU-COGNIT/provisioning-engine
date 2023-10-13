@@ -19,12 +19,11 @@ require_relative '../src/client/client'
 require_relative '../src/server/runtime'
 
 $LOAD_PATH << "#{__dir__}/lib" # Test libraries
+require 'common'
 require 'log'
 require 'crud'
 require 'auth'
 require 'crud_invalid'
-
-SR = 'Serverless Runtime'
 
 ############################################################################
 # Initialize rspec configuration
@@ -54,14 +53,6 @@ RSpec.configure do |c|
 end
 
 ############################################################################
-# RSPEC methods
-############################################################################
-
-def examples?(examples, conf, params = nil)
-    include_context(examples, params) if conf[:examples][examples]
-end
-
-############################################################################
 # Run tests
 ############################################################################
 RSpec.describe 'Provision Engine API' do
@@ -79,31 +70,4 @@ RSpec.describe 'Provision Engine API' do
     end
 
     examples?('inspect logs', rspec_conf[:conf])
-end
-
-############################################################################
-# Helpers
-############################################################################
-
-def random_string
-    chars = ('a'..'z').to_a + ('A'..'Z').to_a
-    string = ''
-    8.times { string << chars[SecureRandom.rand(chars.size)] }
-    string
-end
-
-def random_faas_minimal
-    flavour = random_string
-    pp "rolled a random flavour #{flavour}"
-
-    {
-        :SERVERLESS_RUNTIME => {
-            :NAME => flavour,
-            :FAAS => {
-                :FLAVOUR => flavour
-            },
-            :SCHEDULING => {},
-            :DEVICE_INFO => {}
-        }
-    }
 end
