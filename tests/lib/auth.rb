@@ -1,6 +1,12 @@
 RSpec.shared_context 'auth' do
-    it 'permission denied on Create' do
+    it 'permission denied on Create service_template' do
         response = @conf[:client][:engine].create(random_faas_minimal)
+        expect([403, 422].include?(response.code)).to be(true)
+    end
+
+    it 'permission denied on Create vm_template' do
+        specification = JSON.load_file('templates/sr_faas_denyVMTemplate.json')
+        response = @conf[:client][:engine].create(specification)
         expect([403, 422].include?(response.code)).to be(true)
     end
 

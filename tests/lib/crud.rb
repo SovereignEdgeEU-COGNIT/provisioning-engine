@@ -30,11 +30,15 @@ RSpec.shared_context 'crud' do |sr_template|
             runtime = JSON.parse(response.body)
             pp runtime
 
-            # TODO: Check flow service for failed states like 7 => FAILED_DEPLOYING
-            next unless runtime['SERVERLESS_RUNTIME']['FAAS']['STATE'] == 'ACTIVE'
-
-            verify_sr_spec(@conf[:specification], runtime)
-            break
+            case runtime['SERVERLESS_RUNTIME']['FAAS']['STATE']
+            when 'ACTIVE'
+                verify_sr_spec(@conf[:specification], runtime)
+                break
+            when 'FAILED'
+                raise 'FaaS VM failed to deploy'
+            else
+                next
+            end
         end
     end
 

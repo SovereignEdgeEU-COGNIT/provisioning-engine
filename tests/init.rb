@@ -47,10 +47,7 @@ rspec_conf = {
     :endpoint => endpoint
 }
 
-RSpec.configure do |c|
-    c.add_setting :rspec
-    c.before { @conf = rspec_conf }
-end
+RSpec.configure {|c| c.before { @conf = rspec_conf } }
 
 ############################################################################
 # Run tests
