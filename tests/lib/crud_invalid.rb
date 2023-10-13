@@ -1,6 +1,6 @@
 RSpec.shared_context 'crud_invalid' do
     it "fail to create a #{SR} with invalid FLAVOUR" do
-        response = @conf[:client][:engine].create(random_faas_minimal)
+        response = @conf[:client][:engine].create(generate_faas_minimal)
         expect(response.code).to eq(422)
     end
 

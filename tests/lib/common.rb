@@ -124,10 +124,11 @@ def random_string
     string
 end
 
-def random_faas_minimal
-    flavour = random_string
-    pp "rolled a random flavour #{flavour}"
-
+def generate_faas_minimal(flavour = nil)
+    if !flavour
+        flavour = random_string
+        pp "rolled a random flavour #{flavour}"
+    end
     {
         'SERVERLESS_RUNTIME' => {
             'NAME' => flavour,

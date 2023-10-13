@@ -1,21 +1,11 @@
 RSpec.shared_context 'auth' do
     it 'permission denied on Create service_template' do
-        response = @conf[:client][:engine].create(random_faas_minimal)
+        response = @conf[:client][:engine].create(generate_faas_minimal)
         expect([403, 422].include?(response.code)).to be(true)
     end
 
     it 'permission denied on Create vm_template' do
-        specification = {
-            'SERVERLESS_RUNTIME' => {
-                'FAAS' => {
-                    'FLAVOUR' => 'DenyVMTemplate'
-                },
-                'SCHEDULING' => {},
-                'DEVICE_INFO' => {}
-            }
-        }
-
-        response = @conf[:client][:engine].create(specification)
+        response = @conf[:client][:engine].create(generate_faas_minimal('DenyVMTemplate'))
         expect([403, 422].include?(response.code)).to be(true)
     end
 
