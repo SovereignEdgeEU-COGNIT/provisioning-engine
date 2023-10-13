@@ -88,13 +88,13 @@ def verify_sr_delete(sr_id)
             when 500
                 raise 'Server error, check logs'
             else
-                raise "Unexpected error code: #{rc}"
+                raise "Unexpected error code: #{response.code}"
             end
         end
     when 500
         raise 'Server error, check logs'
     else
-        raise "Unexpected error code: #{rc}"
+        raise "Unexpected error code: #{response.code}"
     end
 end
 
