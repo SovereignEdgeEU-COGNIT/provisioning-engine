@@ -31,10 +31,10 @@ RSpec.shared_context 'crud' do |sr_template|
             pp runtime
 
             case runtime['SERVERLESS_RUNTIME']['FAAS']['STATE']
-            when 'ACTIVE'
+            when ProvisionEngine::ServerlessRuntime::FUNCTION_STATES[1]
                 verify_sr_spec(@conf[:specification], runtime)
                 break
-            when 'FAILED'
+            when ProvisionEngine::ServerlessRuntime::FUNCTION_STATES[3]
                 raise 'FaaS VM failed to deploy'
             else
                 next
