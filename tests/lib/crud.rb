@@ -3,20 +3,14 @@ RSpec.shared_context 'crud' do |sr_template|
         pp "Requesting #{SR} creation with template #{sr_template}"
 
         specification = JSON.load_file("templates/#{sr_template}")
-        response = @conf[:engine_client].create(specification)
+        response = @conf[:client][:engine].create(specification)
+        @conf[:specification] = specification
 
         expect(response.code).to eq(201)
 
         runtime = JSON.parse(response.body)
-        pp runtime
 
         @conf[:id] = runtime['SERVERLESS_RUNTIME']['ID'].to_i
-
-        validation = ProvisionEngine::ServerlessRuntime.validate(runtime)
-        pp validation[1]
-
-        raise validation[1] unless validation[0]
-
         @conf[:create] = true
     end
 
@@ -26,26 +20,31 @@ RSpec.shared_context 'crud' do |sr_template|
         attempts = @conf[:conf][:timeouts][:get]
 
         1.upto(attempts) do |t|
+            expect(t <= attempts).to be(true)
             sleep 1
-            expect(t == attempts).to be(false)
 
-            response = @conf[:engine_client].get(@conf[:id])
+            response = @conf[:client][:engine].get(@conf[:id])
 
             expect(response.code).to eq(200)
 
             runtime = JSON.parse(response.body)
             pp runtime
 
-            # TODO: Check flow service for failed states like 7 => FAILED_DEPLOYING
-            next unless runtime['SERVERLESS_RUNTIME']['FAAS']['STATE'] == 'ACTIVE'
-
-            break
+            case runtime['SERVERLESS_RUNTIME']['FAAS']['STATE']
+            when 'ACTIVE'
+                verify_sr_spec(@conf[:specification], runtime)
+                break
+            when 'FAILED'
+                raise 'FaaS VM failed to deploy'
+            else
+                next
+            end
         end
     end
 
     it "fail to update #{SR}" do
         # skip "#{SR} creation failed" unless @conf[:create]
-        response = @conf[:engine_client].update(@conf[:id], {})
+        response = @conf[:client][:engine].update(@conf[:id], {})
 
         expect(response.code).to eq(501)
 
@@ -58,6 +57,6 @@ RSpec.shared_context 'crud' do |sr_template|
     it "delete a #{SR}" do
         skip "#{SR} creation failed" unless @conf[:create]
 
-        wait_delete(@conf[:id])
+        verify_sr_delete(@conf[:id])
     end
 end

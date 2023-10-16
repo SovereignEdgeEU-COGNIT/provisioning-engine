@@ -1,6 +1,11 @@
 RSpec.shared_context 'auth' do
-    it 'permission denied on Create' do
-        response = @conf[:engine_client].create(random_faas_minimal)
+    it 'permission denied on Create service_template' do
+        response = @conf[:client][:engine].create(generate_faas_minimal)
+        expect([403, 422].include?(response.code)).to be(true)
+    end
+
+    it 'permission denied on Create vm_template' do
+        response = @conf[:client][:engine].create(generate_faas_minimal('DenyVMTemplate'))
         expect([403, 422].include?(response.code)).to be(true)
     end
 
@@ -9,7 +14,7 @@ RSpec.shared_context 'auth' do
         @conf[:auth][:sr_template] = JSON.load_file('templates/sr_faas_minimal.json')
         @conf[:auth][:engine_client_no_auth] = ProvisionEngine::Client.new(@conf[:endpoint])
 
-        response = @conf[:engine_client].create(@conf[:auth][:sr_template])
+        response = @conf[:client][:engine].create(@conf[:auth][:sr_template])
 
         expect(response.code).to eq(201)
         @conf[:auth][:create] = true
@@ -73,6 +78,6 @@ RSpec.shared_context 'auth' do
     it "delete #{SR} after auth tests have concluded" do
         skip "#{SR} creation failed" unless @conf[:auth][:create]
 
-        wait_delete(@conf[:auth][:id])
+        verify_sr_delete(@conf[:auth][:id])
     end
 end
