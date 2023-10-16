@@ -48,103 +48,123 @@ module ProvisionEngine
             :properties => {
                 :SERVERLESS_RUNTIME => {
                     :type => 'object',
-                :properties => {
-                    :NAME => {
-                        :type => 'string'
-                    },
-                    :ID => {
-                        :type => 'integer'
-                    },
-                    :SERVICE_ID => {
-                        :type => 'integer'
-                    },
-                    :FAAS => {
-                        :type => 'object',
                     :properties => {
-                        :CPU => {
-                            :type => 'number'
-                        },
-                        :VCPU => {
-                            :type => 'float'
-                        },
-                        :MEMORY => {
-                            :type => 'integer'
-                        },
-                        :DISK_SIZE => {
-                            :type => 'integer'
-                        },
-                        :FLAVOUR => {
+                        :NAME => {
                             :type => 'string'
                         },
-                        :VM_ID => {
+                        :ID => {
                             :type => 'integer'
                         },
-                        :STATE => {
-                            :type =>  'string',
-                            :enum => FUNCTION_STATES
-                        }
-                    },
-                    :required => ['FLAVOUR']
-                    },
-                    :DAAS => {
-                        'oneOf' => [
-                            {
-                                :type => 'object',
-                                :properties => {
-                                    :CPU => {
-                                        :type => 'number'
-                                    },
-                                    :VCPU => {
-                                        :type => 'integer'
-                                    },
-                                    :MEMORY => {
-                                        :type => 'integer'
-                                    },
-                                    :DISK_SIZE => {
-                                        :type => 'integer'
-                                    },
-                                    :FLAVOUR => {
-                                        :type => 'string'
-                                    },
-                                    :VM_ID => {
-                                        :type => 'integer'
-                                    },
-                                    :STATE => {
-                                        :type => 'string',
-                                        :enum => FUNCTION_STATES
-                                    }
+                        :SERVICE_ID => {
+                            :type => 'integer'
+                        },
+                        :FAAS => {
+                            :type => 'object',
+                            :properties => {
+                                :FLAVOUR => {
+                                    :type => 'string'
                                 },
-                                :required => ['FLAVOUR']
+                                :CPU => {
+                                    :type => 'number'
+                                },
+                                :VCPU => {
+                                    :type => 'integer'
+                                },
+                                :MEMORY => {
+                                    :type => 'integer'
+                                },
+                                :DISK_SIZE => {
+                                    :type => 'integer'
+                                },
+                                :VM_ID => {
+                                    :type => 'integer'
+                                },
+                                :STATE => {
+                                    :type =>  'string',
+                                    :enum => FUNCTION_STATES
+                                },
+                                :ENDPOINT => {
+                                    'oneOf' => [
+                                        {
+                                            :type => 'string'
+                                        },
+                                        {
+                                            :type => 'null'
+                                        }
+                                    ]
+                                }
                             },
-                            {
-                                :type =>  'null'
+                            :required => ['FLAVOUR']
+                        },
+                        :DAAS => {
+                            'oneOf' => [
+                                {
+                                    :type => 'object',
+                                    :properties => {
+                                        :FLAVOUR => {
+                                            :type => 'string'
+                                        },
+                                        :CPU => {
+                                            :type => 'number'
+                                        },
+                                        :VCPU => {
+                                            :type => 'integer'
+                                        },
+                                        :MEMORY => {
+                                            :type => 'integer'
+                                        },
+                                        :DISK_SIZE => {
+                                            :type => 'integer'
+                                        },
+                                        :VM_ID => {
+                                            :type => 'integer'
+                                        },
+                                        :STATE => {
+                                            :type => 'string',
+                                            :enum => FUNCTION_STATES
+                                        },
+                                        :ENDPOINT => {
+                                            'oneOf' => [
+                                                {
+                                                    :type => 'string'
+                                                },
+                                                {
+                                                    :type => 'null'
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    :required => ['FLAVOUR']
+                                },
+                                {
+                                    :type =>  'null'
+                                }
+                            ]
+                        },
+                        :SCHEDULING => {
+                            :type => 'object',
+                            :properties => {
+                                :POLICY => {
+                                    :type => 'string'
+                                },
+                                :REQUIREMENTS => {
+                                    :type => 'string'
+                                }
                             }
-                        ]
-                    },
-                    :SCHEDULING => {
-                        :type => 'object',
-                    :properties => {
-                        :POLICY => {
-                            :type => 'string'
                         },
-                        :REQUIREMENTS => {
-                            :type => 'string'
+                        :DEVICE_INFO => {
+                            :type => 'object',
+                            :properties => {
+                                :LATENCY_TO_PE => {
+                                    :type => 'integer'
+                                },
+                                :GEOGRAPHIC_LOCATION => {
+                                    :type => 'string'
+                                }
+                            }
                         }
-                    }
                     },
-                    :DEVICE_INFO => {
-                        :type => 'object',
-                    :properties => {
-                        :LATENCY_TO_PE => {
-                            :type => 'integer'
-                        },
-                        :GEOGRAPHIC_LOCATION => {
-                            :type => 'string'
-                        }
-                    }
-                    }
-                },
-                :required => ['FAAS']
+                    :required => ['FAAS']
                 }
             }
         }.freeze
