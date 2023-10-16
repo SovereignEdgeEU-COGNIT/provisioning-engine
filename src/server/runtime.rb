@@ -10,6 +10,39 @@ module ProvisionEngine
 
         DOCUMENT_TYPE = 1337
 
+        FUNCTION_STATES = ['PENDING', 'RUNNING', 'UPDATING', 'ERROR'].freeze
+        FUNCTION_LCM_STATES = {
+            FUNCTION_STATES[0] => [
+                'LCM_INIT',
+                'BOOT',
+                'PROLOG',
+                'BOOT_UNKNOWN',
+                'BOOT_POWEROFF',
+                'BOOT_SUSPENDED',
+                'BOOT_STOPPED',
+                'BOOT_UNDEPLOY',
+                'PROLOG_UNDEPLOY',
+                'CLEANUP_RESUBMIT'
+            ],
+            FUNCTION_STATES[1] => ['RUNNING'],
+            FUNCTION_STATES[3] => [
+                'FAILURE',
+                'UNKNOWN',
+                'BOOT_FAILURE',
+                'BOOT_MIGRATE_FAILURE',
+                'BOOT_UNDEPLOY_FAILURE',
+                'BOOT_STOPPED_FAILURE',
+                'PROLOG_FAILURE',
+                'PROLOG_MIGRATE_FAILURE',
+                'PROLOG_MIGRATE_POWEROFF_FAILURE',
+                'PROLOG_MIGRATE_SUSPEND_FAILURE',
+                'PROLOG_RESUME_FAILURE',
+                'PROLOG_UNDEPLOY_FAILURE',
+                'PROLOG_MIGRATE_UNKNOWN',
+                'PROLOG_MIGRATE_UNKNOWN_FAILURE'
+            ]
+        }.freeze
+
         SCHEMA_SPECIFICATION = {
             :type => 'object',
             :properties => {
@@ -42,6 +75,13 @@ module ProvisionEngine
                         },
                         :FLAVOUR => {
                             :type => 'string'
+                        },
+                        :VM_ID => {
+                            :type => 'integer'
+                        },
+                        :STATE => {
+                            :type =>  'string',
+                            :enum => FUNCTION_STATES
                         }
                     },
                     :required => ['FLAVOUR']
@@ -65,9 +105,16 @@ module ProvisionEngine
                                     },
                                     :FLAVOUR => {
                                         :type => 'string'
+                                    },
+                                    :VM_ID => {
+                                        :type => 'integer'
+                                    },
+                                    :STATE => {
+                                        :type => 'string',
+                                        :enum => FUNCTION_STATES
                                     }
                                 },
-                              :required => ['FLAVOUR']
+                                :required => ['FLAVOUR']
                             },
                             {
                                 :type =>  'null'
@@ -100,39 +147,6 @@ module ProvisionEngine
                 :required => ['FAAS']
                 }
             }
-        }.freeze
-
-        FUNCTION_STATES = ['PENDING', 'RUNNING', 'UPDATING', 'ERROR'].freeze
-        FUNCTION_LCM_STATES = {
-            FUNCTION_STATES[0] => [
-                'LCM_INIT',
-                'BOOT',
-                'PROLOG',
-                'BOOT_UNKNOWN',
-                'BOOT_POWEROFF',
-                'BOOT_SUSPENDED',
-                'BOOT_STOPPED',
-                'BOOT_UNDEPLOY',
-                'PROLOG_UNDEPLOY',
-                'CLEANUP_RESUBMIT'
-            ],
-            FUNCTION_STATES[1] => ['RUNNING'],
-            FUNCTION_STATES[3] => [
-                'FAILURE',
-                'UNKNOWN',
-                'BOOT_FAILURE',
-                'BOOT_MIGRATE_FAILURE',
-                'BOOT_UNDEPLOY_FAILURE',
-                'BOOT_STOPPED_FAILURE',
-                'PROLOG_FAILURE',
-                'PROLOG_MIGRATE_FAILURE',
-                'PROLOG_MIGRATE_POWEROFF_FAILURE',
-                'PROLOG_MIGRATE_SUSPEND_FAILURE',
-                'PROLOG_RESUME_FAILURE',
-                'PROLOG_UNDEPLOY_FAILURE',
-                'PROLOG_MIGRATE_UNKNOWN',
-                'PROLOG_MIGRATE_UNKNOWN_FAILURE'
-            ]
         }.freeze
 
         attr_accessor :cclient, :body
