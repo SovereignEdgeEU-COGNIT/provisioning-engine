@@ -7,7 +7,7 @@ info:
 components:
   schemas:
     ServerlessRuntime:
-      $ref: './schema_sr.json'
+      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/swagger/schema_sr.json'
   securitySchemes:
     basicAuth:
       type: http
