@@ -10,97 +10,164 @@ module ProvisionEngine
 
         DOCUMENT_TYPE = 1337
 
+        FUNCTION_STATES = ['PENDING', 'RUNNING', 'UPDATING', 'ERROR'].freeze
+        FUNCTION_LCM_STATES = {
+            FUNCTION_STATES[0] => [
+                'LCM_INIT',
+                'BOOT',
+                'PROLOG',
+                'BOOT_UNKNOWN',
+                'BOOT_POWEROFF',
+                'BOOT_SUSPENDED',
+                'BOOT_STOPPED',
+                'BOOT_UNDEPLOY',
+                'PROLOG_UNDEPLOY',
+                'CLEANUP_RESUBMIT'
+            ],
+            FUNCTION_STATES[1] => ['RUNNING'],
+            FUNCTION_STATES[3] => [
+                'FAILURE',
+                'UNKNOWN',
+                'BOOT_FAILURE',
+                'BOOT_MIGRATE_FAILURE',
+                'BOOT_UNDEPLOY_FAILURE',
+                'BOOT_STOPPED_FAILURE',
+                'PROLOG_FAILURE',
+                'PROLOG_MIGRATE_FAILURE',
+                'PROLOG_MIGRATE_POWEROFF_FAILURE',
+                'PROLOG_MIGRATE_SUSPEND_FAILURE',
+                'PROLOG_RESUME_FAILURE',
+                'PROLOG_UNDEPLOY_FAILURE',
+                'PROLOG_MIGRATE_UNKNOWN',
+                'PROLOG_MIGRATE_UNKNOWN_FAILURE'
+            ]
+        }.freeze
+
         SCHEMA_SPECIFICATION = {
             :type => 'object',
             :properties => {
                 :SERVERLESS_RUNTIME => {
                     :type => 'object',
-                :properties => {
-                    :NAME => {
-                        :type => 'string'
-                    },
-                    :ID => {
-                        :type => 'integer'
-                    },
-                    :SERVICE_ID => {
-                        :type => 'integer'
-                    },
-                    :FAAS => {
-                        :type => 'object',
                     :properties => {
-                        :CPU => {
-                            :type => 'number'
-                        },
-                        :VCPU => {
-                            :type => 'float'
-                        },
-                        :MEMORY => {
-                            :type => 'integer'
-                        },
-                        :DISK_SIZE => {
-                            :type => 'integer'
-                        },
-                        :FLAVOUR => {
+                        :NAME => {
                             :type => 'string'
-                        }
-                    },
-                    :required => ['FLAVOUR']
-                    },
-                    :DAAS => {
-                        'oneOf' => [
-                            {
-                                :type => 'object',
-                                :properties => {
-                                    :CPU => {
-                                        :type => 'number'
-                                    },
-                                    :VCPU => {
-                                        :type => 'integer'
-                                    },
-                                    :MEMORY => {
-                                        :type => 'integer'
-                                    },
-                                    :DISK_SIZE => {
-                                        :type => 'integer'
-                                    },
-                                    :FLAVOUR => {
-                                        :type => 'string'
-                                    }
+                        },
+                        :ID => {
+                            :type => 'integer'
+                        },
+                        :SERVICE_ID => {
+                            :type => 'integer'
+                        },
+                        :FAAS => {
+                            :type => 'object',
+                            :properties => {
+                                :FLAVOUR => {
+                                    :type => 'string'
                                 },
-                              :required => ['FLAVOUR']
+                                :CPU => {
+                                    :type => 'number'
+                                },
+                                :VCPU => {
+                                    :type => 'integer'
+                                },
+                                :MEMORY => {
+                                    :type => 'integer'
+                                },
+                                :DISK_SIZE => {
+                                    :type => 'integer'
+                                },
+                                :VM_ID => {
+                                    :type => 'integer'
+                                },
+                                :STATE => {
+                                    :type =>  'string',
+                                    :enum => FUNCTION_STATES
+                                },
+                                :ENDPOINT => {
+                                    'oneOf' => [
+                                        {
+                                            :type => 'string'
+                                        },
+                                        {
+                                            :type => 'null'
+                                        }
+                                    ]
+                                }
                             },
-                            {
-                                :type =>  'null'
+                            :required => ['FLAVOUR']
+                        },
+                        :DAAS => {
+                            'oneOf' => [
+                                {
+                                    :type => 'object',
+                                    :properties => {
+                                        :FLAVOUR => {
+                                            :type => 'string'
+                                        },
+                                        :CPU => {
+                                            :type => 'number'
+                                        },
+                                        :VCPU => {
+                                            :type => 'integer'
+                                        },
+                                        :MEMORY => {
+                                            :type => 'integer'
+                                        },
+                                        :DISK_SIZE => {
+                                            :type => 'integer'
+                                        },
+                                        :VM_ID => {
+                                            :type => 'integer'
+                                        },
+                                        :STATE => {
+                                            :type => 'string',
+                                            :enum => FUNCTION_STATES
+                                        },
+                                        :ENDPOINT => {
+                                            'oneOf' => [
+                                                {
+                                                    :type => 'string'
+                                                },
+                                                {
+                                                    :type => 'null'
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    :required => ['FLAVOUR']
+                                },
+                                {
+                                    :type =>  'null'
+                                }
+                            ]
+                        },
+                        :SCHEDULING => {
+                            :type => 'object',
+                            :properties => {
+                                :POLICY => {
+                                    :type => 'string'
+                                },
+                                :REQUIREMENTS => {
+                                    :type => 'string'
+                                }
                             }
-                        ]
-                    },
-                    :SCHEDULING => {
-                        :type => 'object',
-                    :properties => {
-                        :POLICY => {
-                            :type => 'string'
                         },
-                        :REQUIREMENTS => {
-                            :type => 'string'
+                        :DEVICE_INFO => {
+                            :type => 'object',
+                            :properties => {
+                                :LATENCY_TO_PE => {
+                                    :type => 'integer'
+                                },
+                                :GEOGRAPHIC_LOCATION => {
+                                    :type => 'string'
+                                }
+                            }
                         }
-                    }
                     },
-                    :DEVICE_INFO => {
-                        :type => 'object',
-                    :properties => {
-                        :LATENCY_TO_PE => {
-                            :type => 'integer'
-                        },
-                        :GEOGRAPHIC_LOCATION => {
-                            :type => 'string'
-                        }
-                    }
-                    }
-                },
-                :required => ['FAAS']
+                    :required => ['FAAS']
                 }
             }
-        }
+        }.freeze
 
         attr_accessor :cclient, :body
 
@@ -194,6 +261,22 @@ module ProvisionEngine
             [204, '']
         end
 
+        #
+        # Validates the Serverless Runtime specification using the distributed schema
+        #
+        # @param [Hash] specification a valid runtime specification parsed to a Hash
+        #
+        # @return [Array] [true,''] or [false, 'reason']
+        #
+        def self.validate(specification)
+            begin
+                JSON::Validator.validate!(SCHEMA_SPECIFICATION, specification)
+                [true, '']
+            rescue JSON::Schema::ValidationError => e
+                [false, "Invalid #{SR} specification: #{e.message}"]
+            end
+        end
+
         #####################
         # Inherited Functions
         #####################
@@ -280,22 +363,6 @@ module ProvisionEngine
                 runtime_definition['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
 
                 break
-            end
-        end
-
-        #
-        # Validates the Serverless Runtime specification using the distributed schema
-        #
-        # @param [Hash] specification a valid runtime specification parsed to a Hash
-        #
-        # @return [Array] [true,''] or [false, 'reason']
-        #
-        def self.validate(specification)
-            begin
-                JSON::Validator.validate!(SCHEMA_SPECIFICATION, specification)
-                [true, '']
-            rescue JSON::Schema::ValidationError => e
-                [false, "Invalid #{SR} specification: #{e.message}"]
             end
         end
 
@@ -396,7 +463,7 @@ module ProvisionEngine
             t = '//TEMPLATE/'
 
             xaas_template['VM_ID'] = vm_id
-            xaas_template['STATE'] = vm.state_str
+            xaas_template['STATE'] = map_vm_state(vm)
             xaas_template['ENDPOINT'] = vm["#{t}NIC[NIC_ID=\"0\"]/IP"]
 
             xaas_template['CPU'] = vm["#{t}CPU"].to_f
@@ -464,6 +531,28 @@ module ProvisionEngine
             xaas << "MEMORY_MAX=\"#{memory_max}\""
 
             xaas.join("\n")
+        end
+
+        #
+        # Maps an OpenNebula VM state to the accepted Function VM states
+        #
+        # @param [OpenNebula::VirtualMachine] vm Virtual Machine representing the Function
+        #
+        # @return [String] Serverless Runtime Function state
+        #
+        def self.map_vm_state(vm)
+            case vm.state_str
+            when 'INIT', 'PENDING', 'HOLD'
+                return FUNCTION_STATES[0]
+            when 'ACTIVE'
+                FUNCTION_LCM_STATES.each do |function_state, vm_states|
+                    return function_state if vm_states.include?(vm.lcm_state_str)
+                end
+            when 'STOPPED', 'SUSPENDED', 'POWEROFF', 'UNDEPLOYED', 'CLONING'
+                return FUNCTION_STATES[2]
+            else
+                return FUNCTION_STATES[3]
+            end
         end
 
     end
