@@ -1,0 +1,241 @@
+openapi: "3.0.0"
+info:
+  version: "0.9.11"
+  title: "Provisioning Engine REST API"
+  description: Provides FaaS capabilities by leveraging features from OpenNebula. Allows to manage Serverless Runtime instances based on a group of Functions defined on request.
+
+components:
+  schemas:
+    ServerlessRuntime:
+      $ref: './schema_sr.json'
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Credentials used to authenticate in OpenNebula
+
+security:
+  - basicAuth: []
+
+paths:
+  /serverless-runtimes/schema:
+      get:
+        summary: Retrieve the Serverless Runtime schema
+        tags:
+          - Serverless Runtimes
+        security: []
+        responses:
+          '200':
+            description: Serverless Runtime schema retrieved
+  /serverless-runtimes:
+    post:
+      summary: Create a Serverless Runtime
+      description: Requires a Serverless Runtime defintion with at least a FaaS flavour
+      tags:
+        - Serverless Runtimes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServerlessRuntime'
+            example:
+              SERVERLESS_RUNTIME:
+                NAME: Function and Data as a Service
+                FAAS:
+                  CPU: 0.11
+                  VCPU: 2
+                  MEMORY: 133
+                  DISK_SIZE: 1025
+                  FLAVOUR: Function
+                DAAS:
+                  CPU: 0.33
+                  VCPU: 1
+                  MEMORY: 197
+                  DISK_SIZE: 1337
+                  FLAVOUR: Data
+                SCHEDULING: {}
+                DEVICE_INFO: {}
+      responses:
+        '201':
+          description: Serverless Runtime created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerlessRuntime'
+              example:
+                SERVERLESS_RUNTIME:
+                  NAME: Function and Data as a Service
+                  ID: 851
+                  FAAS:
+                    CPU: 0.11
+                    VCPU: 2
+                    MEMORY: 133
+                    DISK_SIZE: 1025
+                    FLAVOUR: Function
+                    VM_ID: 592
+                    STATE: PENDING
+                    ENDPOINT:
+                  DAAS:
+                    CPU: 0.33
+                    VCPU: 1
+                    MEMORY: 197
+                    DISK_SIZE: 1337
+                    FLAVOUR: Data
+                    VM_ID: 593
+                    STATE: PENDING
+                    ENDPOINT:
+                  SCHEDULING: {}
+                  DEVICE_INFO: {}
+                  SERVICE_ID: 850
+        '400':
+          description: Invalid Serverless Runtime definition
+        '401':
+          description: Missing authentication
+        '403':
+          description: Permission Denied
+        '422':
+          description: Unprocessable Serverless Runtime definition
+        '500':
+          description: Failed to create Serverless Runtime
+        '504':
+          description: Timeout when creating Serverless Runtime
+  /serverless-runtimes/{id}:
+    get:
+      summary: Retrieve information about a Serverless Runtime
+      description: Retrieves a JSON representation of the Serverless Runtime. During the retrieval the state of the Serverles Runtime gets updated according to it's underlying components. The document entry in the OpenNebula database will get updated as well.
+      tags:
+        - Serverless Runtimes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Serverless Runtime information retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerlessRuntime'
+              example:
+                SERVERLESS_RUNTIME:
+                  NAME: Function and Data as a Service
+                  ID: 851
+                  FAAS:
+                    CPU: 0.11
+                    VCPU: 2
+                    MEMORY: 133
+                    DISK_SIZE: 1025
+                    FLAVOUR: Function
+                    VM_ID: 592
+                    STATE: RUNNING
+                    ENDPOINT:
+                  DAAS:
+                    CPU: 0.33
+                    VCPU: 1
+                    MEMORY: 197
+                    DISK_SIZE: 1337
+                    FLAVOUR: Data
+                    VM_ID: 593
+                    STATE: RUNNING
+                    ENDPOINT:
+                  SCHEDULING: {}
+                  DEVICE_INFO: {}
+                  SERVICE_ID: 850
+        '401':
+          description: Missing authentication
+        '403':
+          description: Permission Denied
+        '404':
+          description: Serverless Runtime not found
+        '500':
+          description: Failed to retrieve Serverless Runtime
+    put:
+      summary: Update a Serverless Runtime
+      description: Updates an existing Serverless Runtime with new requirements. Translates into a change on the Virtual Machines containing the Functions requested by the Serverless Runtime.
+      tags:
+        - Serverless Runtimes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServerlessRuntime'
+      responses:
+        '501':
+          description: Serverless Runtime update not implemented
+    delete:
+      summary: Delete a Serverless Runtime
+      description: Upon success it will trigger a deletion request of the associated services and Virtual Machines in OpenNebula
+      tags:
+        - Serverless Runtimes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Serverless Runtime deleted
+        '401':
+          description: Missing authentication
+        '403':
+          description: Permission Denied
+        '404':
+          description: Serverless Runtime not found
+        '423':
+          description: Cannot delete serverless Runtime
+        '500':
+          description: Failed to delete Serverless Runtime
+  /server/version:
+      get:
+        summary: Retrieve the Provisioning Engine server version
+        tags:
+          - Server
+        security: []
+        responses:
+          '200':
+            description: Provisioning Engine server version retrieved
+            content:
+              application/json:
+                schema:
+                  type: string
+                example:
+                  "0.9.11"
+  /server/config:
+      get:
+        summary: Retrieve the Provisioning Engine configuration
+        tags:
+          - Server
+        security: []
+        responses:
+          '200':
+            description: Provisioning Engine server configuration retrieved
+            content:
+              application/json:
+                schema:
+                  type: object
+                example:
+                  one_xmlrpc:      http://localhost:2633/RPC2
+                  oneflow_server:  http://localhost:2474
+                  host: 127.0.0.1
+                  port: 1337
+                  capacity:
+                    max:
+                      vcpu_mult: 2
+                      memory_mult: 2
+                    default:
+                      vcpu: 2
+                      memory: 1024
+                  log:
+                    level: 1
+                    system: 'file'
