@@ -6,4 +6,4 @@ Provisioning Engine acts as a entry point for the Device Runtime, instructs the 
 
 ## Documentation
 
-In order to use an already existing provisioning engine, refer to the [user guide](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki/User-Guide) in the [wiki](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki). If you want to deploy an instance of the provision engine, refer to the [admin guide](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki/Admin-Guide)
+In order to use an already existing provisioning engine, refer to the [user guide](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki/User-Guide) in the [wiki](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki). If you want to deploy an instance of the provision engine, refer to the [admin guide](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki/Admin-Guide) 
