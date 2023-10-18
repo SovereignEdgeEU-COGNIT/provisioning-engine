@@ -22,11 +22,14 @@ require 'configuration'
 require 'client'
 require 'runtime'
 
+VERSION = '0.9.11'
+
 ############################################################################
 # Define API Helpers
 ############################################################################
 RC = 'Response HTTP Return Code'.freeze
 SR = 'Serverless Runtime'.freeze
+PE = 'Provisioning Engine'.freeze
 SRD = "#{SR} definition".freeze
 DENIED = 'Permission denied'.freeze
 NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
@@ -117,6 +120,10 @@ before do
         settings.logger.debug(call)
         request.body.rewind
     end
+end
+
+get '/serverless-runtimes/schema' do
+    json_response(200, ProvisionEngine::ServerlessRuntime::SCHEMA_SPECIFICATION)
 end
 
 post '/serverless-runtimes' do
@@ -253,4 +260,16 @@ delete '/serverless-runtimes/:id' do
         log_response('error', rc, rb, NO_DELETE)
         halt 500, json_response(500, rb)
     end
+end
+
+get '/engine/version' do
+    json_response(200, VERSION)
+end
+
+get '/server/version' do
+    json_response(200, VERSION)
+end
+
+get '/server/config' do
+    json_response(200, conf)
 end
