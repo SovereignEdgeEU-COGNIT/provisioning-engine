@@ -398,6 +398,23 @@ module ProvisionEngine
                     'roles' => []
                 }
 
+                schevice=''
+                ['SCHEDULING', 'DEVICE_INFO'].each do |i|
+                    next unless specification.key?(i)
+
+                    i_template = ''
+                    specification[i].each do |property, value|
+                        i_template << "#{property}=\"#{value}\",\n" if value
+                    end
+
+                    if !i_template.empty?
+                        i_template.reverse!.sub!("\n", '').reverse!
+                        i_template.reverse!.sub!(',', '').reverse!
+                    end
+
+                    schevice << "#{i}=[#{i_template}]\n"
+                end
+
                 ['FAAS', 'DAAS'].each do |role|
                     next unless specification[role]
 
@@ -413,13 +430,13 @@ module ProvisionEngine
                             return response
                         end
 
-                        override = vm_template_contents(specification[role], response[1],
-                                                        client.conf[:capacity])
-                        client.logger.debug("Applying vm_template_contents to role #{role}\n#{override}")
+                        override = function_requierements(specification[role], response[1],
+                                                          client.conf[:capacity])
 
+                        client.logger.debug("Applying vm_template_contents to role #{role}\n#{override}")
                         merge_template['roles'] << {
                             'name' => role,
-                            'vm_template_contents' => override
+                            'vm_template_contents' => "#{override}\n#{schevice}"
                         }
                     end
                 end
@@ -484,12 +501,11 @@ module ProvisionEngine
         #
         # @return [String] vm_template contents for a oneflow service template
         #
-        def self.vm_template_contents(specification, vm_template, conf_capacity)
-            # def self.vm_template_contents(specification, vm_template, conf_capacity)
-            disk_size = specification['DISK_SIZE']
+        def self.function_requierements(role_specification, vm_template, conf_capacity)
+            disk_size = role_specification['DISK_SIZE']
             xaas = []
 
-            xaas << "CPU=#{specification['CPU']}" if specification['CPU']
+            xaas << "CPU=#{role_specification['CPU']}" if role_specification['CPU']
             xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
             xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
 
@@ -506,20 +522,20 @@ module ProvisionEngine
                 xaas << "DISK=[#{disk_template}]"
             end
 
-            if specification['VCPU']
-                xaas << "VCPU=#{specification['VCPU']}"
+            if role_specification['VCPU']
+                xaas << "VCPU=#{role_specification['VCPU']}"
 
-                vcpu_max = specification['VCPU'] * conf_capacity[:max][:vcpu_mult]
+                vcpu_max = role_specification['VCPU'] * conf_capacity[:max][:vcpu_mult]
             else # get upper limit from mult * vm_template_vcpu
                 vcpu = vm_template['//TEMPLATE/VCPU'].to_i
                 vcpu = conf_capacity[:default][:vcpu] if vcpu.zero?
 
                 vcpu_max = vcpu * conf_capacity[:max][:vcpu_mult]
             end
-            if specification['MEMORY']
-                xaas << "MEMORY=#{specification['MEMORY']}"
+            if role_specification['MEMORY']
+                xaas << "MEMORY=#{role_specification['MEMORY']}"
 
-                memory_max = specification['MEMORY'] * conf_capacity[:max][:memory_mult]
+                memory_max = role_specification['MEMORY'] * conf_capacity[:max][:memory_mult]
             else # get upper limit from mult * vm_template_memory
                 memory = vm_template['//TEMPLATE/MEMORY'].to_i
                 memory = conf_capacity[:default][:memory] if memory.zero?
