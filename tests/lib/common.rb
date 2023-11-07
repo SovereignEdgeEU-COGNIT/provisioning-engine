@@ -31,7 +31,7 @@ def verify_sr_spec(specification, runtime)
     expect(response.code.to_i).to eq(200)
 
     ['FAAS', 'DAAS'].each do |role|
-        next unless specification[role]
+        next unless specification[role] && !specification[role]['FLAVOUR'].empty?
 
         vm = OpenNebula::VirtualMachine.new_with_id(runtime[role]['VM_ID'], @conf[:client][:oned])
         raise "Error getting #{SR} VM" if OpenNebula.is_error?(vm.info)

@@ -25,28 +25,24 @@
           "required": ["FLAVOUR"]
         },
         "DAAS": {
-          "oneOf": [
-            {
-              "type": "object",
-              "properties": {
-                "FLAVOUR": { "type": "string" },
-                "CPU": { "type": "number" },
-                "VCPU": { "type": "integer" },
-                "MEMORY": { "type": "integer" },
-                "DISK_SIZE": { "type": "integer" },
-                "VM_ID": { "type": "integer" },
-                "STATE": {
-                  "type": "string",
-                  "enum": ["PENDING", "RUNNING", "UPDATING", "ERROR"]
-                },
-                "ENDPOINT": {
-                  "oneOf": [{ "type": "string" }, { "type": "null" }]
-                }
+            "type": "object",
+            "properties": {
+              "FLAVOUR": { "type": "string" },
+              "CPU": { "type": "number" },
+              "VCPU": { "type": "integer" },
+              "MEMORY": { "type": "integer" },
+              "DISK_SIZE": { "type": "integer" },
+              "VM_ID": { "type": "integer" },
+              "STATE": {
+                "type": "string",
+                "enum": ["PENDING", "RUNNING", "UPDATING", "ERROR"]
               },
-              "required": ["FLAVOUR"]
+              "ENDPOINT": {
+                "oneOf": [{ "type": "string" }, { "type": "null" }]
+              }
             },
-            { "type": "null" }
-          ]
+            "required": ["FLAVOUR"],
+            "minProperties" : 1
         },
         "SCHEDULING": {
           "type": "object",
