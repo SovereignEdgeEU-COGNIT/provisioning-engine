@@ -478,10 +478,16 @@ module ProvisionEngine
             vm = rb
             xaas_template = {}
             t = '//TEMPLATE/'
+            nic = "#{t}NIC[NIC_ID=\"0\"]/"
 
             xaas_template['VM_ID'] = vm_id
             xaas_template['STATE'] = map_vm_state(vm)
-            xaas_template['ENDPOINT'] = vm["#{t}NIC[NIC_ID=\"0\"]/IP"]
+
+            if vm["#{nic}EXTERNAL_IP"]
+                xaas_template['ENDPOINT'] = vm["#{nic}EXTERNAL_IP"]
+            else
+                xaas_template['ENDPOINT'] = vm["#{nic}IP"]
+            end
 
             xaas_template['CPU'] = vm["#{t}CPU"].to_f
             xaas_template['VCPU'] = vm["#{t}VCPU"].to_i
