@@ -43,6 +43,7 @@ module ProvisionEngine
             ]
         }.freeze
 
+        # TODO: Load json schema from FS. Distribute schema in the installer to /etc.
         SCHEMA_SPECIFICATION = {
             :type => 'object',
             :properties => {
@@ -97,49 +98,43 @@ module ProvisionEngine
                             :required => ['FLAVOUR']
                         },
                         :DAAS => {
-                            'oneOf' => [
-                                {
-                                    :type => 'object',
-                                    :properties => {
-                                        :FLAVOUR => {
+                            :type => 'object',
+                            :properties => {
+                                :FLAVOUR => {
+                                    :type => 'string'
+                                },
+                                :CPU => {
+                                    :type => 'number'
+                                },
+                                :VCPU => {
+                                    :type => 'integer'
+                                },
+                                :MEMORY => {
+                                    :type => 'integer'
+                                },
+                                :DISK_SIZE => {
+                                    :type => 'integer'
+                                },
+                                :VM_ID => {
+                                    :type => 'integer'
+                                },
+                                :STATE => {
+                                    :type => 'string',
+                                    :enum => FUNCTION_STATES
+                                },
+                                :ENDPOINT => {
+                                    'oneOf' => [
+                                        {
                                             :type => 'string'
                                         },
-                                        :CPU => {
-                                            :type => 'number'
-                                        },
-                                        :VCPU => {
-                                            :type => 'integer'
-                                        },
-                                        :MEMORY => {
-                                            :type => 'integer'
-                                        },
-                                        :DISK_SIZE => {
-                                            :type => 'integer'
-                                        },
-                                        :VM_ID => {
-                                            :type => 'integer'
-                                        },
-                                        :STATE => {
-                                            :type => 'string',
-                                            :enum => FUNCTION_STATES
-                                        },
-                                        :ENDPOINT => {
-                                            'oneOf' => [
-                                                {
-                                                    :type => 'string'
-                                                },
-                                                {
-                                                    :type => 'null'
-                                                }
-                                            ]
+                                        {
+                                            :type => 'null'
                                         }
-                                    },
-                                    :required => ['FLAVOUR']
-                                },
-                                {
-                                    :type =>  'null'
+                                    ]
                                 }
-                            ]
+                            },
+                            :required => ['FLAVOUR'],
+                            :minProperties => 1
                         },
                         :SCHEDULING => {
                             :type => 'object',
@@ -416,7 +411,7 @@ module ProvisionEngine
                 end
 
                 ['FAAS', 'DAAS'].each do |role|
-                    next unless specification[role]
+                    next unless specification[role] && !specification[role]['FLAVOUR'].empty?
 
                     client.logger.info("Requesting #{CVMR} for function #{role}\n#{specification[role]}")
 
@@ -453,7 +448,11 @@ module ProvisionEngine
 
         def self.tuple(specification)
             tuple = specification['FAAS']['FLAVOUR']
-            tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
+
+            if specification['DAAS'] && !specification['DAAS']['FLAVOUR'].empty?
+                tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}"
+            end
+
             tuple
         end
 

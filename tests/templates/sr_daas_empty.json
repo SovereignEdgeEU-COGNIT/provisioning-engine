@@ -3,7 +3,9 @@
     "FAAS": {
       "FLAVOUR": "Function"
     },
-    "DAAS": null,
+    "DAAS": {
+      "FLAVOUR": ""
+    },
     "SCHEDULING": {},
     "DEVICE_INFO": {}
   }
