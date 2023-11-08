@@ -180,11 +180,14 @@ module ProvisionEngine
 
             return [rc, rb] if rc != 201
 
-            service_id = rb['DOCUMENT']['ID']
+            service_id = rb['DOCUMENT']['ID'].to_i
 
             client.logger.info("#{SR} Service #{service_id} created")
 
-            ServerlessRuntime.service_sync(client, specification, service_id)
+            specification['SERVICE_ID'] = service_id
+            response = ServerlessRuntime.service_sync(client, specification, service_id)
+            rc = response[0]
+            return [rc, response[1]] if rc != 200
 
             client.logger.info("Allocating #{SR} Document")
             client.logger.debug(specification)
@@ -217,7 +220,10 @@ module ProvisionEngine
             runtime.load_body
             service_id = runtime.body['SERVICE_ID']
 
-            ServerlessRuntime.service_sync(client, runtime.body, service_id)
+            response = ServerlessRuntime.service_sync(client, runtime.body, service_id)
+            rc = response[0]
+            return [rc, response[1]] if rc != 200
+
             runtime.update
 
             [200, runtime]
@@ -340,6 +346,16 @@ module ProvisionEngine
 
                 service = rb
 
+                if client.service_state(service) == 7 # FAILED_DEPLOYING
+                    msg = "#{SR} service #{service_id} failed to deploy"
+                    client.logger.error(service)
+
+                    response = client.service_recover_delete(service_id)
+                    rc = response[0]
+
+                    return [rc, msg]
+                end
+
                 service_template = service['DOCUMENT']['TEMPLATE']['BODY']
                 roles = service_template['roles']
 
@@ -353,11 +369,10 @@ module ProvisionEngine
 
                 client.logger.debug(service)
 
-                runtime_definition['SERVICE_ID'] = service['DOCUMENT']['ID'].to_i
                 runtime_definition['FAAS'].merge!(xaas_template(client, roles[0]))
                 runtime_definition['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
 
-                break
+                return [200, '']
             end
         end
 

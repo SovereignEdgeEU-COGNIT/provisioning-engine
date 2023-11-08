@@ -107,6 +107,13 @@ module ProvisionEngine
             return_http_response(response)
         end
 
+        def service_recover_delete(id)
+            @logger.debug("Forcing service #{id} deletion")
+
+            response = service_action(id, 'recover', { 'delete' => true })
+            return_http_response(response)
+        end
+
         def service_template_get(id)
             response = @client_oneflow.get("/service_template/#{id}")
             return_http_response(response)
@@ -122,6 +129,32 @@ module ProvisionEngine
 
             response = service_template_action(id, 'instantiate', options)
             return_http_response(response)
+        end
+
+        def service_fail?(service)
+            service_state(service) == 7
+        end
+
+        # SERVICE_STATES = [
+        #     'PENDING',
+        #     'DEPLOYING',
+        #     'RUNNING',
+        #     'UNDEPLOYING',
+        #     'WARNING',
+        #     'DONE',
+        #     'FAILED_UNDEPLOYING',
+        #     'FAILED_DEPLOYING',
+        #     'SCALING',
+        #     'FAILED_SCALING',
+        #     'COOLDOWN',
+        #     'DEPLOYING_NETS',
+        #     'UNDEPLOYING_NETS',
+        #     'FAILED_DEPLOYING_NETS',
+        #     'FAILED_UNDEPLOYING_NETS',
+        #     'HOLD'
+        # ]
+        def service_state(service)
+            service['DOCUMENT']['TEMPLATE']['BODY']['state']
         end
 
         private
@@ -146,7 +179,7 @@ module ProvisionEngine
         end
 
         def service_action(id, action, options = {})
-            url = "/service/#{id}/action", body
+            url = "/service/#{id}/action"
 
             flow_element_action(url, action, options)
         end
