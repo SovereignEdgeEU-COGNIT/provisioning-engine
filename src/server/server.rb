@@ -158,7 +158,7 @@ post '/serverless-runtimes' do
         log_response('error', rc, rb, "Timeout when creating #{SR}")
         halt rc, json_response(rc, rb)
     else
-        log_response('error', rc, rb, "Failed to create #{SR}")
+        log_response('error', 500, rb, "Failed to create #{SR}")
         halt 500, json_response(500, rb)
     end
 end
@@ -189,7 +189,7 @@ get '/serverless-runtimes/:id' do
         log_response('error', rc, rb, SR_NOT_FOUND)
         halt rc, json_response(rc, rb)
     else
-        log_response('error', rc, rb, "Failed to get #{SR}")
+        log_response('error', 500, rb, "Failed to get #{SR}")
         halt 500, json_response(500, rb)
     end
 end
@@ -244,7 +244,7 @@ delete '/serverless-runtimes/:id' do
             log_response('error', rc, rb, NO_DELETE)
             halt rc, json_response(rc, rb)
         else
-            log_response('error', rc, rb, NO_DELETE)
+            log_response('error', 500, rb, NO_DELETE)
             halt 500, json_response(500, rb)
         end
     when 401
@@ -257,7 +257,7 @@ delete '/serverless-runtimes/:id' do
         log_response('error', rc, rb, SR_NOT_FOUND)
         halt rc, json_response(rc, rb)
     else
-        log_response('error', rc, rb, NO_DELETE)
+        log_response('error', 500, rb, NO_DELETE)
         halt 500, json_response(500, rb)
     end
 end
