@@ -10,7 +10,7 @@ RSpec.shared_context 'crud_invalid' do
                 'FAAS' => {
                     'FLAVOUR' => 'Function'
                 },
-                'DAAS' => {}, # DAAS should be null or have properties
+                'DAAS' => {}, # DAAS should not exist or have FLAVOUR at least
                 'SCHEDULING' => {},
                 'DEVICE_INFO' => {}
             }

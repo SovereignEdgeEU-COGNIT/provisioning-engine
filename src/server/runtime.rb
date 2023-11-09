@@ -178,15 +178,15 @@ module ProvisionEngine
             rc = response[0]
             rb = response[1]
 
-            return [rc, rb] if rc != 201
+            return [rc, rb] if rc != 200
 
             service_id = rb['DOCUMENT']['ID'].to_i
-
+            specification['SERVICE_ID'] = service_id
             client.logger.info("#{SR} Service #{service_id} created")
 
-            specification['SERVICE_ID'] = service_id
             response = ServerlessRuntime.service_sync(client, specification, service_id)
             rc = response[0]
+
             return [rc, response[1]] if rc != 200
 
             client.logger.info("Allocating #{SR} Document")
@@ -262,6 +262,40 @@ module ProvisionEngine
             [204, '']
         end
 
+        def self.service_recover(client, service_id, options = {})
+            if options[:delete]
+                response = client.service_recover(service_id, { 'delete' => true })
+                rc = response[0]
+
+                return response if rc == 204
+
+                client.logger.error(response[1])
+                msg = "Could not force service #{service_id} deletion"
+                return [rc, msg]
+            else
+                response = client.service_recover(service_id)
+
+                if response[0] != 201
+                    client.logger.error("Could not recover service #{service_id}")
+                    return response
+                end
+
+                response = client.service_get(service_id)
+
+                return response unless response[0] == 200
+
+                service = response[1]
+
+                if client.service_fail?(service)
+                    msg = "Cannot recover #{service_id} from failure"
+                    client.logger.error(service)
+                    return [500, msg]
+                end
+
+                return [200, service]
+            end
+        end
+
         #
         # Validates the Serverless Runtime specification using the distributed schema
         #
@@ -322,57 +356,48 @@ module ProvisionEngine
         end
 
         #
-        # Updates Serverless Runtime Document specification based on the underlying elements state
+        # Updates Serverless Runtime definition based on the underlying elements state
         #
         # @param [CloudClient] client OpenNebula interface
-        # @param [Hash] runtime_definition Serverless Runtime definition to be updated
+        # @param [Hash] runtim Serverless Runtime definition to be updated
         # @param [Integer] service_id OneFlow service ID mapped to the Serverless Runtime
         # @param [Integer] timeout How long to wait for Role VMs to be created
         #
-        def self.service_sync(client, runtime_definition, service_id, timeout = 30)
+        def self.service_sync(client, runtime, service_id, timeout = 30)
             1.upto(timeout) do |t|
-                sleep 1
+                catch(:query_service) do
+                    if t == 30
+                        msg = "OpenNebula did not create VMs for the #{SR} service after #{t} seconds"
+                        return [504, msg]
+                    end
 
-                if t == 30
-                    msg = "OpenNebula did not create VMs for the #{SR} service after #{t} seconds"
-                    return [504, msg]
-                end
+                    sleep 1
 
-                response = client.service_get(service_id)
-                rc = response[0]
-                rb = response[1]
-
-                return [rc, rb] if rc != 200
-
-                service = rb
-
-                if client.service_state(service) == 7 # FAILED_DEPLOYING
-                    msg = "#{SR} service #{service_id} failed to deploy"
-                    client.logger.error(service)
-
-                    response = client.service_recover_delete(service_id)
+                    response = client.service_get(service_id)
                     rc = response[0]
+                    rb = response[1]
 
-                    return [rc, msg]
+                    return [rc, rb] if rc != 200
+
+                    roles = rb['DOCUMENT']['TEMPLATE']['BODY']['roles']
+
+                    roles.each do |role|
+                        next if role['nodes'].size < role['cardinality']
+
+                        msg = "Waiting #{t} seconds for service role #{role['name']} VMs"
+                        client.logger.debug(msg)
+
+                        throw(:query_service)
+                    end
+
+                    client.logger.debug(service)
+
+                    roles.each do |role|
+                        runtime[role['name']].merge!(xaas_template(client, role))
+                    end
+
+                    return [200, '']
                 end
-
-                service_template = service['DOCUMENT']['TEMPLATE']['BODY']
-                roles = service_template['roles']
-
-                begin
-                    roles[0]['nodes'][0]['vm_info']['VM']
-                rescue NoMethodError # will fail if service VM information is missing
-                    client.logger.debug("Waiting #{t} seconds for service VMs")
-
-                    next
-                end
-
-                client.logger.debug(service)
-
-                runtime_definition['FAAS'].merge!(xaas_template(client, roles[0]))
-                runtime_definition['DAAS'].merge!(xaas_template(client, roles[1])) if roles[1]
-
-                return [200, '']
             end
         end
 
@@ -451,7 +476,29 @@ module ProvisionEngine
                     end
                 end
 
-                return client.service_template_instantiate(service_template['ID'], merge_template)
+                response = client.service_template_instantiate(service_template['ID'],
+                                                               merge_template)
+                rc = response[0]
+                rb = response[1]
+
+                return response if rc != 201
+
+                service_id = rb['DOCUMENT']['ID'].to_i
+
+                response = client.service_get(service_id)
+                rc = response[0]
+                rb = response[1]
+
+                return response if rc != 200
+
+                service = rb
+
+                if client.service_fail?(service)
+                    client.logger.error("#{SR} service #{service_id} entered FAILED state\n#{service}")
+                    response = service_recover(client, service_id, { 'delete' => true })
+                end
+
+                return response
             end
 
             msg = "Cannot find a valid service template for the specified flavours: #{tuple}\n"

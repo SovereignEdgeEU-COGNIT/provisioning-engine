@@ -5,6 +5,26 @@ module ProvisionEngine
     #
     class CloudClient
 
+        SERVICE_STATES = [
+            'PENDING',
+            'DEPLOYING',
+            'RUNNING',
+            'UNDEPLOYING',
+            'WARNING',
+            'DONE',
+            'FAILED_UNDEPLOYING',
+            'FAILED_DEPLOYING',
+            'SCALING',
+            'FAILED_SCALING',
+            'COOLDOWN',
+            'DEPLOYING_NETS',
+            'UNDEPLOYING_NETS',
+            'FAILED_DEPLOYING_NETS',
+            'FAILED_UNDEPLOYING_NETS',
+            'HOLD'
+        ]
+
+
         def self.map_error_oned(xmlrpc_errno)
             # ESUCCESS        = 0x0000
             # EAUTHENTICATION = 0x0100
@@ -107,10 +127,10 @@ module ProvisionEngine
             return_http_response(response)
         end
 
-        def service_recover_delete(id)
+        def service_recover(id, options = {})
             @logger.debug("Forcing service #{id} deletion")
 
-            response = service_action(id, 'recover', { 'delete' => true })
+            response = service_action(id, 'recover', options)
             return_http_response(response)
         end
 
@@ -132,27 +152,9 @@ module ProvisionEngine
         end
 
         def service_fail?(service)
-            service_state(service) == 7
+            SERVICE_STATES[service_state(service)].include?('FAILED')
         end
 
-        # SERVICE_STATES = [
-        #     'PENDING',
-        #     'DEPLOYING',
-        #     'RUNNING',
-        #     'UNDEPLOYING',
-        #     'WARNING',
-        #     'DONE',
-        #     'FAILED_UNDEPLOYING',
-        #     'FAILED_DEPLOYING',
-        #     'SCALING',
-        #     'FAILED_SCALING',
-        #     'COOLDOWN',
-        #     'DEPLOYING_NETS',
-        #     'UNDEPLOYING_NETS',
-        #     'FAILED_DEPLOYING_NETS',
-        #     'FAILED_UNDEPLOYING_NETS',
-        #     'HOLD'
-        # ]
         def service_state(service)
             service['DOCUMENT']['TEMPLATE']['BODY']['state']
         end
