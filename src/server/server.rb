@@ -90,8 +90,8 @@ def log_response(level, code, data, message)
     end
 
     settings.logger.info("#{RC}: #{code}")
-    settings.logger.debug("Response Body: #{body}")
     settings.logger.send(level, message)
+    settings.logger.debug("Response Body: #{body}")
 end
 
 ############################################################################
@@ -177,7 +177,7 @@ get '/serverless-runtimes/:id' do
 
     case rc
     when 200
-        log_response('info', rc, rb, SR)
+        log_response('info', rc, rb, "#{SR} retrieved")
         json_response(rc, rb.to_sr)
     when 401
         log_response('error', rc, rb, NO_AUTH)
@@ -189,7 +189,7 @@ get '/serverless-runtimes/:id' do
         log_response('error', rc, rb, SR_NOT_FOUND)
         halt rc, json_response(rc, rb)
     else
-        log_response('error', 500, rb, "Failed to get #{SR}")
+        log_response('error', 500, rb, "Failed to retrieve #{SR}")
         halt 500, json_response(500, rb)
     end
 end
