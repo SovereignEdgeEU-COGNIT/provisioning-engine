@@ -178,34 +178,41 @@ module ProvisionEngine
             rc = response[0]
             rb = response[1]
 
-            return [rc, rb] if rc != 200
+            case rc
+            when 200
+                service_id = rb['DOCUMENT']['ID'].to_i
+                specification['SERVICE_ID'] = service_id
+                client.logger.info("#{SR} Service #{service_id} created")
 
-            service_id = rb['DOCUMENT']['ID'].to_i
-            specification['SERVICE_ID'] = service_id
-            client.logger.info("#{SR} Service #{service_id} created")
+                response = ServerlessRuntime.service_sync(client, specification,
+                                                          service_id)
+                rc = response[0]
 
-            response = ServerlessRuntime.service_sync(client, specification, service_id)
-            rc = response[0]
+                return [rc, response[1]] if rc != 200
 
-            return [rc, response[1]] if rc != 200
+                client.logger.info("Allocating #{SR} Document")
+                client.logger.debug(specification)
 
-            client.logger.info("Allocating #{SR} Document")
-            client.logger.debug(specification)
+                xml = ServerlessRuntime.build_xml
+                runtime = ServerlessRuntime.new(xml, client.client_oned)
+                response = runtime.allocate(specification)
 
-            xml = ServerlessRuntime.build_xml
-            runtime = ServerlessRuntime.new(xml, client.client_oned)
-            response = runtime.allocate(specification)
+                if OpenNebula.is_error?(response)
+                    return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
+                            response.message]
+                end
 
-            if OpenNebula.is_error?(response)
-                return [ProvisionEngine::CloudClient.map_error_oned(response.errno),
-                        response.message]
+                client.logger.info("Created #{SR} Document")
+
+                runtime.info
+
+                return [201, runtime]
+            when 204
+                return [500, rb]
+
+            else
+                return response
             end
-
-            client.logger.info("Created #{SR} Document")
-
-            runtime.info
-
-            [201, runtime]
         end
 
         def self.get(client, id)
@@ -215,7 +222,7 @@ module ProvisionEngine
             runtime.cclient = client
 
             # DocumentJSON.info doesn't have error code
-            return [404, 'Document not found'] if runtime.name.nil?
+            return [404, "#{SR} document not found"] if runtime.name.nil?
 
             runtime.load_body
             service_id = runtime.body['SERVICE_ID']
@@ -262,7 +269,7 @@ module ProvisionEngine
             [204, '']
         end
 
-        def self.service_recover(client, service_id, options = {})
+        def self.recover_service(client, service_id, options = {})
             if options[:delete]
                 response = client.service_recover(service_id, { 'delete' => true })
                 rc = response[0]
@@ -359,7 +366,7 @@ module ProvisionEngine
         # Updates Serverless Runtime definition based on the underlying elements state
         #
         # @param [CloudClient] client OpenNebula interface
-        # @param [Hash] runtim Serverless Runtime definition to be updated
+        # @param [Hash] runtime Serverless Runtime definition to be updated
         # @param [Integer] service_id OneFlow service ID mapped to the Serverless Runtime
         # @param [Integer] timeout How long to wait for Role VMs to be created
         #
@@ -371,21 +378,21 @@ module ProvisionEngine
                         return [504, msg]
                     end
 
-                    sleep 1
-
                     response = client.service_get(service_id)
                     rc = response[0]
                     rb = response[1]
 
                     return [rc, rb] if rc != 200
 
-                    roles = rb['DOCUMENT']['TEMPLATE']['BODY']['roles']
+                    service = rb
+                    roles = service['DOCUMENT']['TEMPLATE']['BODY']['roles']
 
                     roles.each do |role|
-                        next if role['nodes'].size < role['cardinality']
+                        next unless role['nodes'].size < role['cardinality']
 
                         msg = "Waiting #{t} seconds for service role #{role['name']} VMs"
                         client.logger.debug(msg)
+                        sleep 1
 
                         throw(:query_service)
                     end
@@ -494,8 +501,12 @@ module ProvisionEngine
                 service = rb
 
                 if client.service_fail?(service)
+                    service_log = service['DOCUMENT']['TEMPLATE']['BODY']['log']
                     client.logger.error("#{SR} service #{service_id} entered FAILED state\n#{service}")
-                    response = service_recover(client, service_id, { 'delete' => true })
+
+                    response = recover_service(client, service_id, { :delete => true })
+
+                    response[1] = service_log if response[0] == 204
                 end
 
                 return response
