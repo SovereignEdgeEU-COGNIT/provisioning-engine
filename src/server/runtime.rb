@@ -433,8 +433,7 @@ module ProvisionEngine
 
             # find flow_template matching flavour tuple
             service_templates.each do |service_template|
-                service_template_body = service_template['TEMPLATE']['BODY']
-                next unless service_template_body['name'] == tuple
+                next unless service_template['NAME'] == tuple
 
                 merge_template = {
                     'roles' => []
@@ -462,7 +461,7 @@ module ProvisionEngine
 
                     client.logger.info("Requesting #{CVMR} for function #{role}\n#{specification[role]}")
 
-                    service_template_body['roles'].each do |service_template_role|
+                    service_template['TEMPLATE']['BODY']['roles'].each do |service_template_role|
                         next unless service_template_role['name'] == role
 
                         response = client.vm_template_get(service_template_role['vm_template'])
