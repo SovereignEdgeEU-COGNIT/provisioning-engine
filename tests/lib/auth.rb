@@ -9,9 +9,9 @@ RSpec.shared_context 'auth' do
         expect([403, 422].include?(response.code)).to be(true)
     end
 
-    it "Creating #{SR} for auth tests requring an existing #{SR}" do
+    it "Creating #{SR} for auth tests requiring an existing #{SR}" do
         @conf[:auth] = {}
-        @conf[:auth][:sr_template] = JSON.load_file('templates/sr_faas_minimal.json')
+        @conf[:auth][:sr_template] = generate_faas_minimal('Function')
         @conf[:auth][:engine_client_no_auth] = ProvisionEngine::Client.new(@conf[:endpoint])
 
         response = @conf[:client][:engine].create(@conf[:auth][:sr_template])
