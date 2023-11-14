@@ -501,12 +501,17 @@ module ProvisionEngine
                 service = rb
 
                 if client.service_fail?(service)
-                    service_log = service['DOCUMENT']['TEMPLATE']['BODY']['log']
-                    client.logger.error("#{SR} service #{service_id} entered FAILED state\n#{service}")
+                    error = "#{SR} service #{service_id} entered FAILED state"
+
+                    client.logger.error(error)
+                    client.logger.debug(service)
 
                     response = recover_service(client, service_id, { :delete => true })
 
-                    response[1] = service_log if response[0] == 204
+                    if response[0] == 204
+                        service_log = service['DOCUMENT']['TEMPLATE']['BODY']['log']
+                        response[1] = { 'error' => error, 'message' => service_log }
+                    end
                 end
 
                 return response
