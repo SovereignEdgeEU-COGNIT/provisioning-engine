@@ -67,4 +67,9 @@ RSpec.describe 'Provision Engine API' do
     end
 
     examples?('inspect logs', rspec_conf[:conf])
+
+    # cleanup possible leftover services for the test user ENV['TESTS_AUTH'][0]
+    after(:all) do
+        # TODO: Skip if oneadmin
+    end
 end

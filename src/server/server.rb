@@ -22,7 +22,7 @@ require 'configuration'
 require 'client'
 require 'runtime'
 
-VERSION = '0.9.12'
+VERSION = '0.9.13'
 
 ############################################################################
 # Define API Helpers
