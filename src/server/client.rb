@@ -5,48 +5,6 @@ module ProvisionEngine
     #
     class CloudClient
 
-        SERVICE_STATES = [
-            'PENDING',
-            'DEPLOYING',
-            'RUNNING',
-            'UNDEPLOYING',
-            'WARNING',
-            'DONE',
-            'FAILED_UNDEPLOYING',
-            'FAILED_DEPLOYING',
-            'SCALING',
-            'FAILED_SCALING',
-            'COOLDOWN',
-            'DEPLOYING_NETS',
-            'UNDEPLOYING_NETS',
-            'FAILED_DEPLOYING_NETS',
-            'FAILED_UNDEPLOYING_NETS',
-            'HOLD'
-        ]
-
-
-        def self.map_error_oned(xmlrpc_errno)
-            # ESUCCESS        = 0x0000
-            # EAUTHENTICATION = 0x0100
-            # EAUTHORIZATION  = 0x0200
-            # ENO_EXISTS      = 0x0400
-            # EACTION         = 0x0800
-            # EXML_RPC_API    = 0x1000
-            # EINTERNAL       = 0x2000
-            # EALLOCATE       = 0x4000
-            # ENOTDEFINED     = 0xF001
-            # EXML_RPC_CALL   = 0xF002
-
-            case xmlrpc_errno
-            when OpenNebula::Error::EAUTHORIZATION
-                403
-            when OpenNebula::Error::ENO_EXISTS
-                404
-            else
-                xmlrpc_errno
-            end
-        end
-
         attr_accessor :conf, :client_oned, :client_oneflow, :logger
 
         #############
@@ -67,7 +25,7 @@ module ProvisionEngine
 
             response = vm.info
             if OpenNebula.is_error?(response)
-                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                rc = ProvisionEngine::Error.map_error_oned(response.errno)
                 return [rc, response.message]
             end
 
@@ -97,7 +55,7 @@ module ProvisionEngine
 
             response = template.info
             if OpenNebula.is_error?(response)
-                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                rc = ProvisionEngine::Error.map_error_oned(response.errno)
                 return [rc, response.message]
             end
 
@@ -107,6 +65,8 @@ module ProvisionEngine
         #############
         # oneflow
         #############
+
+        # TODO: use OpenNebula::Service for service management
 
         def service_get(id)
             response = @client_oneflow.get("/service/#{id}")
@@ -120,15 +80,20 @@ module ProvisionEngine
             return_http_response(response)
         end
 
-        def service_delete(id)
+        def service_delete(id, force = false)
             @logger.debug("Deleting service #{id}")
 
-            response = @client_oneflow.delete("/service/#{id}")
+            if force
+                response = service_recover(id, { 'delete' => true })
+            else
+                response = @client_oneflow.delete("/service/#{id}")
+            end
+
             return_http_response(response)
         end
 
         def service_recover(id, options = {})
-            @logger.debug("Forcing service #{id} deletion")
+            @logger.debug("Recovering service #{id} deletion") unless options['delete']
 
             response = service_action(id, 'recover', options)
             return_http_response(response)
@@ -152,7 +117,7 @@ module ProvisionEngine
         end
 
         def service_fail?(service)
-            SERVICE_STATES[service_state(service)].include?('FAILED')
+            OpenNebula::Service::STATE_STR[service_state(service)].include?('FAILED')
         end
 
         def service_state(service)

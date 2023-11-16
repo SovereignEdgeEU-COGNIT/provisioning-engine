@@ -65,7 +65,7 @@ EXEC_FILE="provision-engine-server"
 EXEC_PATH="/usr/local/bin/${EXEC_FILE}"
 INSTALL_DIR="/opt/provision-engine" # install location is hardcoded
 
-modules="client.rb configuration.rb log.rb server.rb runtime.rb"
+modules="client.rb configuration.rb log.rb server.rb runtime.rb error.rb"
 gems=("opennebula" "sinatra" "logger" "json-schema") # check requires on server.rb
 
 action="${1:-"install"}"

@@ -45,12 +45,12 @@ module ProvisionEngine
         private
 
         # TODO: Allow reusing previous file log
-        def initialize_file_logger(level)
+        def initialize_file_logger(level, rotate = true)
             FileUtils.mkdir_p(LOGS) unless Dir.exist?(LOGS)
             file = File.join(LOGS, "#{@component}.log")
 
             # log rotation
-            FileUtils.mv(file, "#{file}.#{Time.now.to_i}") if File.exist?(file)
+            FileUtils.mv(file, "#{file}.#{Time.now.to_i}") if rotate == true && File.exist?(file)
 
             @logger = ::Logger.new(file)
             @logger.level = level || ::Logger::INFO

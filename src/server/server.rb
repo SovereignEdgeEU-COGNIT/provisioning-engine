@@ -21,6 +21,7 @@ require 'log'
 require 'configuration'
 require 'client'
 require 'runtime'
+require 'error'
 
 VERSION = '0.9.13'
 
@@ -28,11 +29,11 @@ VERSION = '0.9.13'
 # Define API Helpers
 ############################################################################
 RC = 'Response HTTP Return Code'.freeze
-SR = 'Serverless Runtime'.freeze
 PE = 'Provisioning Engine'.freeze
-SRD = "#{SR} definition".freeze
+SR = 'Serverless Runtime'.freeze
 DENIED = 'Permission denied'.freeze
 NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
+SRD = "#{SR} definition".freeze
 SR_NOT_FOUND = "#{SR} not found".freeze
 NO_DELETE = "Failed to delete #{SR}".freeze
 
