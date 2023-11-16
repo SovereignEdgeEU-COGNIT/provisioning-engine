@@ -66,53 +66,39 @@ module ProvisionEngine
         # oneflow
         #############
 
-        # TODO: use OpenNebula::Service for service management
-
         def service_get(id)
             response = @client_oneflow.get("/service/#{id}")
             return_http_response(response)
         end
 
         def service_update(id, body)
-            @logger.debug("Updating service #{id} with #{body}")
+            @logger.info("Updating service #{id}")
+            @logger.debug(body)
 
             response = @client_oneflow.put("/service/#{id}", body)
             return_http_response(response)
         end
 
-        def service_delete(id, force = false)
-            @logger.debug("Deleting service #{id}")
+        def service_delete(id)
+            @logger.info("Deleting service #{id}")
 
-            if force
-                response = service_recover(id, { 'delete' => true })
-            else
-                response = @client_oneflow.delete("/service/#{id}")
-            end
+            response = @client_oneflow.delete("/service/#{id}")
+            return_http_response(response)
+        end
 
+        def service_destroy(id)
+            response = service_recover(id, { 'delete' => true })
             return_http_response(response)
         end
 
         def service_recover(id, options = {})
-            @logger.debug("Recovering service #{id} deletion") unless options['delete']
+            if options['delete']
+                @logger.info("Forcing service #{id} deletion")
+            else
+                @logger.info("Recovering service #{id} deletion")
+            end
 
             response = service_action(id, 'recover', options)
-            return_http_response(response)
-        end
-
-        def service_template_get(id)
-            response = @client_oneflow.get("/service_template/#{id}")
-            return_http_response(response)
-        end
-
-        def service_template_pool_get
-            response = @client_oneflow.get('/service_template')
-            return_http_response(response)
-        end
-
-        def service_template_instantiate(id, options = {})
-            @logger.debug("Instantiating service_template #{id} with options #{options}")
-
-            response = service_template_action(id, 'instantiate', options)
             return_http_response(response)
         end
 
@@ -122,6 +108,23 @@ module ProvisionEngine
 
         def service_state(service)
             service['DOCUMENT']['TEMPLATE']['BODY']['state']
+        end
+
+        def service_template_get(id)
+            response = @client_oneflow.get("/service_template/#{id}")
+            return_http_response(response)
+        end
+
+        def service_template_instantiate(id, options = {})
+            @logger.info("Instantiating service_template #{id}")
+
+            response = service_template_action(id, 'instantiate', options)
+            return_http_response(response)
+        end
+
+        def service_template_pool_get
+            response = @client_oneflow.get('/service_template')
+            return_http_response(response)
         end
 
         private
@@ -159,6 +162,11 @@ module ProvisionEngine
 
         def flow_element_action(url, action, options = {})
             body = Service.build_json_action(action, options)
+
+            if !options.empty?
+                @logger.info('with additional parameters')
+                @logger.debug(options)
+            end
 
             @client_oneflow.post(url, body)
         end

@@ -10,9 +10,9 @@ end
 
 def verify_sr_spec(specification, runtime)
     [specification, runtime].each do |sr|
-        schema_ok = ProvisionEngine::ServerlessRuntime.validate(sr)
+        response = ProvisionEngine::ServerlessRuntime.validate(sr)
 
-        raise schema_ok[1] unless schema_ok[0]
+        raise response[1] unless response[0] == 200
     end
 
     specification = specification['SERVERLESS_RUNTIME']

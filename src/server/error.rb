@@ -5,12 +5,16 @@ module ProvisionEngine
     # Additional helpers to verify OpenNebula errors by code and message
     #
     # TODO: schema
-    class Error < Hash
+    class Error < Array
 
-        def initialize(error, message = '')
+        def initialize(code, error, message = '')
             super()
-            self[:error] = error
-            self[:message] = message
+
+            self[0] = code
+            self[1] = {
+                'error' => error,
+                'message' => message
+            }
         end
 
         def self.wrong_document_type?(code, message)
