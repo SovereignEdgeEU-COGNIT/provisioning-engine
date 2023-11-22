@@ -13,7 +13,7 @@ module ProvisionEngine
         SRS = "#{SR} Service".freeze
         SRS_NOT_FOUND = "#{SRS} not found".freeze
         SRS_NO_READ = "Failed to read #{SRS}".freeze
-        SERVICE_NO_DELETE = "Failed to delete #{service_id}".freeze
+        SERVICE_NO_DELETE = 'Failed to delete service'.freeze
 
         FUNCTION_STATES = ['PENDING', 'RUNNING', 'UPDATING', 'ERROR'].freeze
         FUNCTION_LCM_STATES = {
@@ -180,6 +180,8 @@ module ProvisionEngine
             response = ServerlessRuntime.to_service(client, specification)
             return response unless response[0] == 200
 
+            client.logger.debug_dev(response)
+
             service_id = response[1]['DOCUMENT']['ID'].to_i
             specification['SERVICE_ID'] = service_id
 
@@ -203,7 +205,7 @@ module ProvisionEngine
                 response = client.service_destroy(service_id)
 
                 if response[0] != 204
-                    message << SERVICE_NO_DELETE
+                    message << "#{SERVICE_NO_DELETE} #{service_id}"
                     message << response[1]
                 end
 
@@ -225,12 +227,17 @@ module ProvisionEngine
 
             if OpenNebula.is_error?(response)
                 rc = ProvisionEngine::Error.map_error_oned(response.errno)
-                rb = response.message
 
-                if rc == 404 || ProvisionEngine::Error.wrong_document_type?(rc, rb)
-                    client.logger.debug(rb)
-                    return ProvisionEngine::Error.new(rc, SRD_NOT_FOUND)
+                if rc == 404 || ProvisionEngine::Error.wrong_document_type?(rc, response.message)
+                    rc = 404 if rc != 404
+                    error = SRD_NOT_FOUND
+                    message = nil
+                else
+                    error = "Failed to read #{SRD}"
+                    message = response.message
                 end
+
+                return ProvisionEngine::Error.new(rc, error, message)
             end
 
             runtime = document
@@ -258,35 +265,34 @@ module ProvisionEngine
             response = @cclient.service_delete(service_id)
             rc = response[0]
 
-            case rc
-            when 204
-                @cclient.logger.info("Deleting #{SRD}")
+            @cclient.logger.warning(SRS_NOT_FOUND) if rc == 404
 
-                response = super()
+            if rc != 204
+                error = "#{SERVICE_NO_DELETE} #{service_id}"
+                message = response[1]
 
-                if OpenNebula.is_error?(response)
-                    rc = ProvisionEngine::Error.map_error_oned(response.errno)
-                    error = "Failed to delete #{SRD}"
-                    return ProvisionEngine::Error.new(rc, error, response.message)
+                [error, message].each {|i| @cclient.logger.error(i)}
+
+                response = @cclient.service_destroy(service_id)
+
+                if response[0] != 204
+                    message << response[1]
+                    return ProvisionEngine::Error.new(500, error, message)
                 end
-
-                @cclient.logger.info("#{SRD} deleted")
-
-                [204, '']
-            when 404
-                @cclient.logger.warning(SRS_NOT_FOUND)
-            else
-                rb = response[1]
-                error = SERVICE_NO_DELETE
-
-                if ProvisionEngine::Error.deploying?(rc, rb)
-                    rc = 423
-                    error = "#{SR} has not finished deployment"
-                    return ProvisionEngine::Error.new(rc, error)
-                end
-
-                return ProvisionEngine::Error.new(rc, error, rb)
             end
+
+            @cclient.logger.info("Deleting #{SRD}")
+
+            response = super()
+
+            if OpenNebula.is_error?(response)
+                rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                error = "Failed to delete #{SRD}"
+                return ProvisionEngine::Error.new(rc, error, response.message)
+            end
+
+            @cclient.logger.info("#{SRD} deleted")
+            [204, '']
         end
 
         #
@@ -301,7 +307,7 @@ module ProvisionEngine
                 JSON::Validator.validate!(SCHEMA_SPECIFICATION, specification)
                 [200, '']
             rescue JSON::Schema::ValidationError => e
-                ProvisionEngine::Error.new(200, "Invalid #{SR} specification", e.message)
+                ProvisionEngine::Error.new(400, "Invalid #{SR} specification", e.message)
             end
         end
 
@@ -473,11 +479,11 @@ module ProvisionEngine
 
                     response = client.service_destroy(service_id)
                     if response[0] != 204
-                        message << SERVICE_NO_DELETE
+                        message << "#{SERVICE_NO_DELETE} #{service_id}"
                         message << response[1]
                     end
 
-                    response = Error.new(rc, error, message)
+                    response = ProvisionEngine::Error.new(500, error, message)
                 end
 
                 return response
@@ -686,14 +692,9 @@ module ProvisionEngine
             runtime
         end
 
-        # TODO: Document
         def self.tuple(specification)
             tuple = specification['FAAS']['FLAVOUR']
-
-            if specification['DAAS'] && !specification['DAAS']['FLAVOUR'].empty?
-                tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}"
-            end
-
+            tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
             tuple
         end
 

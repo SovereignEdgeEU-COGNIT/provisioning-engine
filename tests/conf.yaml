@@ -7,4 +7,4 @@
   'auth': true
   'crud': true
   'crud_invalid': true
-  'inspect logs': true
+  'inspect logs': false

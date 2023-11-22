@@ -7,10 +7,6 @@ module ProvisionEngine
 
         attr_accessor :conf, :client_oned, :client_oneflow, :logger
 
-        #############
-        # oned
-        #############
-
         def initialize(conf, auth)
             @conf = conf
             @logger = ProvisionEngine::Logger.new(conf[:log], 'CloudClient')
@@ -18,6 +14,10 @@ module ProvisionEngine
             create_client_oned(auth, conf[:one_xmlrpc])
             create_client_oneflow(auth, conf[:oneflow_server])
         end
+
+        #############
+        # oned
+        #############
 
         def vm_get(id)
             id = id.to_i unless id.is_a?(Integer)
@@ -87,8 +87,7 @@ module ProvisionEngine
         end
 
         def service_destroy(id)
-            response = service_recover(id, { 'delete' => true })
-            return_http_response(response)
+            service_recover(id, { 'delete' => true })
         end
 
         def service_recover(id, options = {})

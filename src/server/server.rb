@@ -14,6 +14,7 @@ require 'logger'
 require 'json-schema'
 require 'opennebula'
 require 'opennebula/oneflow_client'
+require 'opennebula/../models/service'
 
 $LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
 # Engine libraries
@@ -49,10 +50,10 @@ def auth?
 
     if auth_header.nil?
         rc = 401
-        message = 'Authentication required'
+        error = 'Authentication required'
 
-        settings.logger.error(message)
-        halt rc, json_response(rc, message)
+        settings.logger.error(error)
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
     end
 
     if auth_header.start_with?('Basic ')
@@ -60,10 +61,10 @@ def auth?
         username, password = Base64.decode64(encoded_credentials).split(':')
     else
         rc = 401
-        message = 'Unsupported authentication scheme'
+        error = 'Unsupported authentication scheme'
 
-        settings.logger.error(message)
-        halt rc, json_response(rc, message)
+        [error, auth_header].each {|i| settings.logger.error(i) }
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, auth_header))
     end
 
     "#{username}:#{password}"
@@ -74,8 +75,10 @@ def body_valid?
         JSON.parse(request.body.read)
     rescue JSON::ParserError => e
         rc = 400
-        settings.logger.error("Invalid JSON: #{e.message}")
-        halt rc, json_response(rc, 'Invalid JSON data')
+        error = 'Invalid JSON'
+
+        [error, e.message].each {|i| settings.logger.error(i) }
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, e.message))
     end
 end
 
@@ -199,10 +202,10 @@ put '/serverless-runtimes/:id' do
     log_request("Update a #{SR}")
 
     rc = 501
-    message = "#{SR} update not implemented"
+    error = "#{SR} update not implemented"
 
-    settings.logger.error("#{SR} update not implemented")
-    halt rc, json_response(rc, message)
+    settings.logger.error(error)
+    halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
 
     auth = auth?
     specification = body_valid?

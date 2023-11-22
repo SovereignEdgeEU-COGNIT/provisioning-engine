@@ -16,6 +16,7 @@ module ProvisionEngine
                 :error => :err, :warning => :warning, :info => :info, :debug => :debug
             }
         }
+        SEP = '-----------------------'
 
         #
         # @param [Hash] config Log configuration as defined in engine.conf
@@ -40,6 +41,19 @@ module ProvisionEngine
 
             define_log_level_methods
             info("Initializing Provision Engine component: #{component}")
+        end
+
+        def debug_dev(message)
+            case @system
+            when 'file'
+                @logger.debug(SEP)
+                @logger.debug(message)
+                @logger.debug(SEP)
+            when 'syslog'
+                Syslog.debug(SEP)
+                Syslog.debug(message)
+                Syslog.debug(SEP)
+            end
         end
 
         private

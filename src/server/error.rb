@@ -40,6 +40,8 @@ module ProvisionEngine
             # EXML_RPC_CALL   = 0xF002
 
             case xmlrpc_errno
+            when OpenNebula::Error::EAUTHENTICATION
+                401
             when OpenNebula::Error::EAUTHORIZATION
                 403
             when OpenNebula::Error::ENO_EXISTS
@@ -47,6 +49,10 @@ module ProvisionEngine
             else
                 500
             end
+        end
+
+        def to_json
+            self[1].to_json
         end
 
     end
