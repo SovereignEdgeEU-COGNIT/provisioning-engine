@@ -6,10 +6,9 @@ require 'uri'
 
 class SimpleHttpClient
 
-    # TODO: Load from one_auth env and files
+    # TODO: Load from ~/.provision_engine_auth
     USERNAME = 'oneadmin'
-    # PASSWORD = 'opennebula'
-    PASSWORD = 'opennebulax'
+    PASSWORD = 'opennebula'
 
     def initialize(url)
         @uri = URI.parse(url)

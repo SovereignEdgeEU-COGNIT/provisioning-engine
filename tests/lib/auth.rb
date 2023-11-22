@@ -60,8 +60,6 @@ RSpec.shared_context 'auth' do
     it 'bad auth on Read' do
         response = @conf[:auth][:engine_client_bad_auth].get(@conf[:auth][:id])
 
-        pp response.code
-
         # DocumentJSON.info doesn't have map_error
         expect([401, 404].include?(response.code)).to be(true)
     end

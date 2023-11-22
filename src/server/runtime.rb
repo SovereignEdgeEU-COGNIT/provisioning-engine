@@ -428,10 +428,10 @@ module ProvisionEngine
 
                         response = client.vm_template_get(service_template_role['vm_template'])
                         rc = response[0]
+                        rb = response[1]
 
                         if rc != 200
                             error = "Failed to read VM Template for Function #{role}"
-                            rb = response[1]
 
                             return ProvisionEngine::Error.new(rc, error, rb)
                         end
@@ -692,9 +692,20 @@ module ProvisionEngine
             runtime
         end
 
+        #
+        # Generates the flow template name for the service instantiation
+        #
+        # @param [Hash] specification Serverless Runtime root level specification
+        #
+        # @return [String] FaasName possibly + -DaasName if DaaS flavour is specified
+        #
         def self.tuple(specification)
             tuple = specification['FAAS']['FLAVOUR']
-            tuple = "#{tuple}-#{specification['DAAS']['FLAVOUR']}" if specification['DAAS']
+
+            if specification['DAAS'] && !specification['DAAS']['FLAVOUR'].empty?
+                tuple << "-#{specification['DAAS']['FLAVOUR']}"
+            end
+
             tuple
         end
 
