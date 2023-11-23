@@ -2,15 +2,13 @@
   "SERVERLESS_RUNTIME": {
     "NAME": "Function and Data as a Service",
     "FAAS": {
-      "CPU": 0.11,
-      "VCPU": 2,
+      "CPU": 2,
       "MEMORY": 133,
       "DISK_SIZE": 1025,
       "FLAVOUR": "Function"
     },
     "DAAS": {
-      "CPU": 0.33,
-      "VCPU": 1,
+      "CPU": 3,
       "MEMORY": 197,
       "DISK_SIZE": 1337,
       "FLAVOUR": "Data"

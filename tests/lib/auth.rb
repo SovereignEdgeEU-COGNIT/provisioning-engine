@@ -1,17 +1,21 @@
 RSpec.shared_context 'auth' do
     it 'permission denied on Create service_template' do
         response = @conf[:client][:engine].create(generate_faas_minimal)
+
         expect([403, 422].include?(response.code)).to be(true)
+        verify_error(response.body)
     end
 
     it 'permission denied on Create vm_template' do
         response = @conf[:client][:engine].create(generate_faas_minimal('DenyVMTemplate'))
+
         expect([403, 422].include?(response.code)).to be(true)
+        verify_error(response.body)
     end
 
-    it "Creating #{SR} for auth tests requring an existing #{SR}" do
+    it "Creating #{SR} for auth tests requiring an existing #{SR}" do
         @conf[:auth] = {}
-        @conf[:auth][:sr_template] = JSON.load_file('templates/sr_faas_minimal.json')
+        @conf[:auth][:sr_template] = generate_faas_minimal('Function')
         @conf[:auth][:engine_client_no_auth] = ProvisionEngine::Client.new(@conf[:endpoint])
 
         response = @conf[:client][:engine].create(@conf[:auth][:sr_template])
@@ -25,14 +29,18 @@ RSpec.shared_context 'auth' do
 
     it 'missing auth on Create' do
         response = @conf[:auth][:engine_client_no_auth].create(@conf[:auth][:sr_template])
+
         expect(response.code.to_i).to eq(401)
+        verify_error(response.body)
     end
 
     it 'missing auth on Read' do
         skip "#{SR} creation failed" unless @conf[:auth][:create]
 
         response = @conf[:auth][:engine_client_no_auth].get(@conf[:auth][:id])
+
         expect(response.code.to_i).to eq(401)
+        verify_error(response.body)
     end
 
     it 'missing auth on Update' do
@@ -43,7 +51,9 @@ RSpec.shared_context 'auth' do
         skip 'Creation did not succeed' unless @conf[:auth][:create]
 
         response = @conf[:auth][:engine_client_no_auth].delete(@conf[:auth][:id])
+
         expect(response.code.to_i).to eq(401)
+        verify_error(response.body)
     end
 
     it 'create engine client with bad auth' do
@@ -55,13 +65,14 @@ RSpec.shared_context 'auth' do
         response = @conf[:auth][:engine_client_bad_auth].create(@conf[:auth][:sr_template])
 
         expect(response.code).to eq(401)
+        verify_error(response.body)
     end
 
     it 'bad auth on Read' do
         response = @conf[:auth][:engine_client_bad_auth].get(@conf[:auth][:id])
 
-        # DocumentJSON.info doesn't have map_error
         expect([401, 404].include?(response.code)).to be(true)
+        verify_error(response.body)
     end
 
     it 'bad auth on Update' do
@@ -71,8 +82,8 @@ RSpec.shared_context 'auth' do
     it 'bad auth on Delete' do
         response = @conf[:auth][:engine_client_bad_auth].delete(@conf[:auth][:id])
 
-        # DocumentJSON.info doesn't have error code
         expect([401, 404].include?(response.code)).to be(true)
+        verify_error(response.body)
     end
 
     it "delete #{SR} after auth tests have concluded" do

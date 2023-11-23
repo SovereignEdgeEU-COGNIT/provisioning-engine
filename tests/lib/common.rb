@@ -10,9 +10,9 @@ end
 
 def verify_sr_spec(specification, runtime)
     [specification, runtime].each do |sr|
-        schema_ok = ProvisionEngine::ServerlessRuntime.validate(sr)
+        response = ProvisionEngine::ServerlessRuntime.validate(sr)
 
-        raise schema_ok[1] unless schema_ok[0]
+        raise response[1] unless response[0] == 200
     end
 
     specification = specification['SERVERLESS_RUNTIME']
@@ -56,7 +56,7 @@ def verify_sr_spec(specification, runtime)
             expect(vm["//TEMPLATE/#{capacity}"].to_f).to eq(specification[role][capacity].to_f)
         end
 
-        expect(runtime[role]['ENDPOINT']).to eq(vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"])
+        expect(runtime[role]['ENDPOINT']).to eq(vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"].to_s)
 
         if specification[role]['DISK_SIZE']
             expect(vm["//TEMPLATE/DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
@@ -111,6 +111,10 @@ def verify_service_delete(sr_id)
 
         break
     end
+end
+
+def verify_error(body)
+    expect(ProvisionEngine.error?(body)).to be(true)
 end
 
 ############################################################################

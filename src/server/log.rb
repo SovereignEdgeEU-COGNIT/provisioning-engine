@@ -16,6 +16,7 @@ module ProvisionEngine
                 :error => :err, :warning => :warning, :info => :info, :debug => :debug
             }
         }
+        SEP = '-----------------------'
 
         #
         # @param [Hash] config Log configuration as defined in engine.conf
@@ -42,15 +43,28 @@ module ProvisionEngine
             info("Initializing Provision Engine component: #{component}")
         end
 
+        def debug_dev(message)
+            case @system
+            when 'file'
+                @logger.debug(SEP)
+                @logger.debug(message)
+                @logger.debug(SEP)
+            when 'syslog'
+                Syslog.debug(SEP)
+                Syslog.debug(message)
+                Syslog.debug(SEP)
+            end
+        end
+
         private
 
         # TODO: Allow reusing previous file log
-        def initialize_file_logger(level)
+        def initialize_file_logger(level, rotate = true)
             FileUtils.mkdir_p(LOGS) unless Dir.exist?(LOGS)
             file = File.join(LOGS, "#{@component}.log")
 
             # log rotation
-            FileUtils.mv(file, "#{file}.#{Time.now.to_i}") if File.exist?(file)
+            FileUtils.mv(file, "#{file}.#{Time.now.to_i}") if rotate == true && File.exist?(file)
 
             @logger = ::Logger.new(file)
             @logger.level = level || ::Logger::INFO

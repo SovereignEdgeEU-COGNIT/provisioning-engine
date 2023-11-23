@@ -17,6 +17,7 @@ require 'opennebula/oneflow_client'
 # Engine libraries
 require_relative '../src/client/client'
 require_relative '../src/server/runtime'
+require_relative '../src/server/error'
 
 $LOAD_PATH << "#{__dir__}/lib" # Test libraries
 require 'common'
@@ -67,4 +68,9 @@ RSpec.describe 'Provision Engine API' do
     end
 
     examples?('inspect logs', rspec_conf[:conf])
+
+    # cleanup possible leftover services for the test user ENV['TESTS_AUTH'][0]
+    after(:all) do
+        # TODO: Skip if oneadmin
+    end
 end

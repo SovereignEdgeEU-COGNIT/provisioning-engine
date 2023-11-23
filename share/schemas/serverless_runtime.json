@@ -1,0 +1,126 @@
+{
+  "type": "object",
+  "properties": {
+    "SERVERLESS_RUNTIME": {
+      "type": "object",
+      "description": "Serverless Runtime, comprised of a mandatory FaaS and an optional DaaS",
+      "properties": {
+        "NAME": {
+          "type": "string",
+          "description": "Name of the Serverless Runtime"
+        },
+        "ID": {
+          "type": "integer",
+          "description": "A unique identifier for the Serverless Runtime"
+        },
+        "SERVICE_ID": {
+          "type": "integer",
+          "description": "An internal identifier for the Cloud Edge Manager"
+        },
+        "FAAS": {
+          "type": "object",
+          "description": "Function as a Service Runtime",
+          "properties": {
+            "FLAVOUR": { "type": "string" },
+            "CPU": {
+              "type": "integer",
+              "description": "Logical cores allocated to the VM containing the Function Runtime"
+            },
+            "MEMORY": {
+              "type": "integer",
+              "description": "RAM in MB allocated to the VM containing the Function Runtime"
+            },
+            "DISK_SIZE": {
+              "type": "integer",
+              "description": "Size in MB of the disk allocated to the VM containing the Function Runtime"
+            },
+            "VM_ID": {
+              "type": "integer",
+              "description": "ID of the VM containing the Function Runtime"
+            },
+            "STATE": {
+              "type": "string",
+              "description": "The state of the VM containing the Function Runtime",
+              "enum": ["PENDING", "RUNNING", "UPDATING", "ERROR"]
+            },
+            "ERROR": {
+              "type": "string",
+              "description": "The error message of the VM containing the Function Runtime"
+            },
+            "ENDPOINT": {
+              "type": "string",
+              "description": "HTTP URL of the Function Runtime. Will be empty if the VM has no network"
+            }
+          },
+          "required": ["FLAVOUR"]
+        },
+        "DAAS": {
+          "type": "object",
+          "description": "Data as a Service Runtime",
+          "properties": {
+            "FLAVOUR": { "type": "string" },
+            "CPU": {
+              "type": "integer",
+              "description": "Logical cores allocated to the VM containing the Function Runtime"
+            },
+            "MEMORY": {
+              "type": "integer",
+              "description": "RAM in MB allocated to the VM containing the Function Runtime"
+            },
+            "DISK_SIZE": {
+              "type": "integer",
+              "description": "Size in MB of the disk allocated to the VM containing the Function Runtime"
+            },
+            "VM_ID": {
+              "type": "integer",
+              "description": "ID of the VM containing the Function Runtime"
+            },
+            "STATE": {
+              "type": "string",
+              "description": "The state of the VM containing the Function Runtime",
+              "enum": ["PENDING", "RUNNING", "UPDATING", "ERROR"]
+            },
+            "ERROR": {
+              "type": "string",
+              "description": "The error message of the VM containing the Function Runtime"
+            },
+            "ENDPOINT": {
+              "type": "string",
+              "description": "HTTP URL of the Function Runtime. Will be empty if the VM has no network"
+            }
+          },
+          "required": ["FLAVOUR"]
+        },
+        "SCHEDULING": {
+          "type": "object",
+          "description": "Scheduling policies and requirements handled by an AI Enabled Orchestrator external to the Cloud Edge manager",
+          "properties": {
+            "POLICY": {
+              "type": "string",
+              "description": "Policy applied to scheduling. Eg: 'energy, latency' will optimise the placement according to those two criteria"
+            },
+            "REQUIREMENTS": {
+              "type": "string",
+              "description": "Requirements of the placement. For instance, 'energy_renewal' will only consider hypervisors powered by renewable energy"
+            }
+          }
+        },
+        "DEVICE_INFO": {
+          "type": "object",
+          "description": "Information about the engine Client Device environment",
+          "properties": {
+            "LATENCY_TO_PE": {
+              "type": "integer",
+              "description": "Latency from the client device to the Provisioning Engine endpoint in miliseconds"
+            },
+            "GEOGRAPHIC_LOCATION": {
+              "type": "string",
+              "description": "Geographic location of the client device in WGS84. https://it.wikipedia.org/wiki/WGS84"
+            }
+          }
+        }
+      },
+      "required": ["FAAS"]
+    }
+  }
+}

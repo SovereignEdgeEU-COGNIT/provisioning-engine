@@ -1,13 +1,15 @@
 openapi: "3.0.0"
 info:
-  version: "0.9.12"
+  version: "0.10.0"
   title: "Provisioning Engine REST API"
   description: Provides FaaS capabilities by leveraging features from OpenNebula. Allows to manage Serverless Runtime instances based on a group of Functions defined on request.
 
 components:
   schemas:
     ServerlessRuntime:
-      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/swagger/schema_sr.json'
+      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/serverless_runtime.json'
+    Error:
+      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/error.json'
   securitySchemes:
     basicAuth:
       type: http
@@ -43,14 +45,12 @@ paths:
               SERVERLESS_RUNTIME:
                 NAME: Function and Data as a Service
                 FAAS:
-                  CPU: 0.11
-                  VCPU: 2
+                  CPU: 2
                   MEMORY: 133
                   DISK_SIZE: 1025
                   FLAVOUR: Function
                 DAAS:
-                  CPU: 0.33
-                  VCPU: 1
+                  CPU: 3
                   MEMORY: 197
                   DISK_SIZE: 1337
                   FLAVOUR: Data
@@ -68,23 +68,21 @@ paths:
                   NAME: Function and Data as a Service
                   ID: 851
                   FAAS:
-                    CPU: 0.11
-                    VCPU: 2
+                    CPU: 2
                     MEMORY: 133
                     DISK_SIZE: 1025
                     FLAVOUR: Function
                     VM_ID: 592
                     STATE: PENDING
-                    ENDPOINT:
+                    ENDPOINT: ''
                   DAAS:
-                    CPU: 0.33
-                    VCPU: 1
+                    CPU: 3
                     MEMORY: 197
                     DISK_SIZE: 1337
                     FLAVOUR: Data
                     VM_ID: 593
                     STATE: PENDING
-                    ENDPOINT:
+                    ENDPOINT: ''
                   SCHEDULING: {}
                   DEVICE_INFO: {}
                   SERVICE_ID: 850
@@ -124,23 +122,21 @@ paths:
                   NAME: Function and Data as a Service
                   ID: 851
                   FAAS:
-                    CPU: 0.11
-                    VCPU: 2
+                    CPU: 2
                     MEMORY: 133
                     DISK_SIZE: 1025
                     FLAVOUR: Function
                     VM_ID: 592
                     STATE: RUNNING
-                    ENDPOINT:
+                    ENDPOINT: ''
                   DAAS:
-                    CPU: 0.33
-                    VCPU: 1
+                    CPU: 3
                     MEMORY: 197
                     DISK_SIZE: 1337
                     FLAVOUR: Data
                     VM_ID: 593
                     STATE: RUNNING
-                    ENDPOINT:
+                    ENDPOINT: ''
                   SCHEDULING: {}
                   DEVICE_INFO: {}
                   SERVICE_ID: 850
@@ -210,7 +206,7 @@ paths:
                 schema:
                   type: string
                 example:
-                  "0.9.11"
+                  "0.10.0"
   /server/config:
       get:
         summary: Retrieve the Provisioning Engine configuration

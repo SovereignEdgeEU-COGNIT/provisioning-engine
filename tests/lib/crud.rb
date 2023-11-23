@@ -49,9 +49,9 @@ RSpec.shared_context 'crud' do |sr_template|
         expect(response.code).to eq(501)
 
         body = JSON.parse(response.body)
-        pp body
 
-        expect(body).to eq('Serverless Runtime update not implemented')
+        verify_error(body)
+        expect(body['error']).to eq('Serverless Runtime update not implemented')
     end
 
     it "delete a #{SR}" do

@@ -14,25 +14,27 @@ require 'logger'
 require 'json-schema'
 require 'opennebula'
 require 'opennebula/oneflow_client'
+require 'opennebula/../models/service'
 
 $LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
 # Engine libraries
 require 'log'
 require 'configuration'
 require 'client'
+require 'error'
 require 'runtime'
 
-VERSION = '0.9.12'
+VERSION = '0.10.0'
 
 ############################################################################
 # Define API Helpers
 ############################################################################
 RC = 'Response HTTP Return Code'.freeze
-SR = 'Serverless Runtime'.freeze
 PE = 'Provisioning Engine'.freeze
-SRD = "#{SR} definition".freeze
+SR = 'Serverless Runtime'.freeze
 DENIED = 'Permission denied'.freeze
 NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
+SRD = "#{SR} definition".freeze
 SR_NOT_FOUND = "#{SR} not found".freeze
 NO_DELETE = "Failed to delete #{SR}".freeze
 
@@ -48,10 +50,10 @@ def auth?
 
     if auth_header.nil?
         rc = 401
-        message = 'Authentication required'
+        error = 'Authentication required'
 
-        settings.logger.error(message)
-        halt rc, json_response(rc, message)
+        settings.logger.error(error)
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
     end
 
     if auth_header.start_with?('Basic ')
@@ -59,10 +61,10 @@ def auth?
         username, password = Base64.decode64(encoded_credentials).split(':')
     else
         rc = 401
-        message = 'Unsupported authentication scheme'
+        error = 'Unsupported authentication scheme'
 
-        settings.logger.error(message)
-        halt rc, json_response(rc, message)
+        [error, auth_header].each {|i| settings.logger.error(i) }
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, auth_header))
     end
 
     "#{username}:#{password}"
@@ -73,8 +75,10 @@ def body_valid?
         JSON.parse(request.body.read)
     rescue JSON::ParserError => e
         rc = 400
-        settings.logger.error("Invalid JSON: #{e.message}")
-        halt rc, json_response(rc, 'Invalid JSON data')
+        error = 'Invalid JSON'
+
+        [error, e.message].each {|i| settings.logger.error(i) }
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, e.message))
     end
 end
 
@@ -90,8 +94,8 @@ def log_response(level, code, data, message)
     end
 
     settings.logger.info("#{RC}: #{code}")
-    settings.logger.debug("Response Body: #{body}")
     settings.logger.send(level, message)
+    settings.logger.debug("Response Body: #{body}")
 end
 
 ############################################################################
@@ -158,7 +162,7 @@ post '/serverless-runtimes' do
         log_response('error', rc, rb, "Timeout when creating #{SR}")
         halt rc, json_response(rc, rb)
     else
-        log_response('error', rc, rb, "Failed to create #{SR}")
+        log_response('error', 500, rb, "Failed to create #{SR}")
         halt 500, json_response(500, rb)
     end
 end
@@ -177,7 +181,7 @@ get '/serverless-runtimes/:id' do
 
     case rc
     when 200
-        log_response('info', rc, rb, SR)
+        log_response('info', rc, rb, "#{SR} retrieved")
         json_response(rc, rb.to_sr)
     when 401
         log_response('error', rc, rb, NO_AUTH)
@@ -189,7 +193,7 @@ get '/serverless-runtimes/:id' do
         log_response('error', rc, rb, SR_NOT_FOUND)
         halt rc, json_response(rc, rb)
     else
-        log_response('error', rc, rb, "Failed to get #{SR}")
+        log_response('error', 500, rb, "Failed to retrieve #{SR}")
         halt 500, json_response(500, rb)
     end
 end
@@ -198,10 +202,10 @@ put '/serverless-runtimes/:id' do
     log_request("Update a #{SR}")
 
     rc = 501
-    message = "#{SR} update not implemented"
+    error = "#{SR} update not implemented"
 
-    settings.logger.error("#{SR} update not implemented")
-    halt rc, json_response(rc, message)
+    settings.logger.error(error)
+    halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
 
     auth = auth?
     specification = body_valid?
@@ -244,7 +248,7 @@ delete '/serverless-runtimes/:id' do
             log_response('error', rc, rb, NO_DELETE)
             halt rc, json_response(rc, rb)
         else
-            log_response('error', rc, rb, NO_DELETE)
+            log_response('error', 500, rb, NO_DELETE)
             halt 500, json_response(500, rb)
         end
     when 401
@@ -257,7 +261,7 @@ delete '/serverless-runtimes/:id' do
         log_response('error', rc, rb, SR_NOT_FOUND)
         halt rc, json_response(rc, rb)
     else
-        log_response('error', rc, rb, NO_DELETE)
+        log_response('error', 500, rb, NO_DELETE)
         halt 500, json_response(500, rb)
     end
 end

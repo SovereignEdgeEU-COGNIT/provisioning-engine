@@ -5,33 +5,7 @@ module ProvisionEngine
     #
     class CloudClient
 
-        def self.map_error_oned(xmlrpc_errno)
-            # ESUCCESS        = 0x0000
-            # EAUTHENTICATION = 0x0100
-            # EAUTHORIZATION  = 0x0200
-            # ENO_EXISTS      = 0x0400
-            # EACTION         = 0x0800
-            # EXML_RPC_API    = 0x1000
-            # EINTERNAL       = 0x2000
-            # EALLOCATE       = 0x4000
-            # ENOTDEFINED     = 0xF001
-            # EXML_RPC_CALL   = 0xF002
-
-            case xmlrpc_errno
-            when OpenNebula::Error::EAUTHORIZATION
-                403
-            when OpenNebula::Error::ENO_EXISTS
-                404
-            else
-                xmlrpc_errno
-            end
-        end
-
         attr_accessor :conf, :client_oned, :client_oneflow, :logger
-
-        #############
-        # oned
-        #############
 
         def initialize(conf, auth)
             @conf = conf
@@ -41,13 +15,17 @@ module ProvisionEngine
             create_client_oneflow(auth, conf[:oneflow_server])
         end
 
+        #############
+        # oned
+        #############
+
         def vm_get(id)
             id = id.to_i unless id.is_a?(Integer)
             vm = OpenNebula::VirtualMachine.new_with_id(id, @client_oned)
 
             response = vm.info
             if OpenNebula.is_error?(response)
-                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                rc = ProvisionEngine::Error.map_error_oned(response.errno)
                 return [rc, response.message]
             end
 
@@ -77,7 +55,7 @@ module ProvisionEngine
 
             response = template.info
             if OpenNebula.is_error?(response)
-                rc = ProvisionEngine::CloudClient.map_error_oned(response.errno)
+                rc = ProvisionEngine::Error.map_error_oned(response.errno)
                 return [rc, response.message]
             end
 
@@ -94,17 +72,41 @@ module ProvisionEngine
         end
 
         def service_update(id, body)
-            @logger.debug("Updating service #{id} with #{body}")
+            @logger.info("Updating service #{id}")
+            @logger.debug(body)
 
             response = @client_oneflow.put("/service/#{id}", body)
             return_http_response(response)
         end
 
         def service_delete(id)
-            @logger.debug("Deleting service #{id}")
+            @logger.info("Deleting service #{id}")
 
             response = @client_oneflow.delete("/service/#{id}")
             return_http_response(response)
+        end
+
+        def service_destroy(id)
+            service_recover(id, { 'delete' => true })
+        end
+
+        def service_recover(id, options = {})
+            if options['delete']
+                @logger.info("Forcing service #{id} deletion")
+            else
+                @logger.info("Recovering service #{id} deletion")
+            end
+
+            response = service_action(id, 'recover', options)
+            return_http_response(response)
+        end
+
+        def service_fail?(service)
+            OpenNebula::Service::STATE_STR[service_state(service)].include?('FAILED')
+        end
+
+        def service_state(service)
+            service['DOCUMENT']['TEMPLATE']['BODY']['state']
         end
 
         def service_template_get(id)
@@ -112,15 +114,15 @@ module ProvisionEngine
             return_http_response(response)
         end
 
-        def service_template_pool_get
-            response = @client_oneflow.get('/service_template')
+        def service_template_instantiate(id, options = {})
+            @logger.info("Instantiating service_template #{id}")
+
+            response = service_template_action(id, 'instantiate', options)
             return_http_response(response)
         end
 
-        def service_template_instantiate(id, options = {})
-            @logger.debug("Instantiating service_template #{id} with options #{options}")
-
-            response = service_template_action(id, 'instantiate', options)
+        def service_template_pool_get
+            response = @client_oneflow.get('/service_template')
             return_http_response(response)
         end
 
@@ -146,7 +148,7 @@ module ProvisionEngine
         end
 
         def service_action(id, action, options = {})
-            url = "/service/#{id}/action", body
+            url = "/service/#{id}/action"
 
             flow_element_action(url, action, options)
         end
@@ -159,6 +161,11 @@ module ProvisionEngine
 
         def flow_element_action(url, action, options = {})
             body = Service.build_json_action(action, options)
+
+            if !options.empty?
+                @logger.info('with additional parameters')
+                @logger.debug(options)
+            end
 
             @client_oneflow.post(url, body)
         end
