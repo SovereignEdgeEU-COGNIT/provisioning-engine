@@ -17,29 +17,12 @@ RSpec.shared_context 'crud' do |sr_template|
     it "read a #{SR}" do
         skip "#{SR} creation failed" unless @conf[:create]
 
-        attempts = @conf[:conf][:timeouts][:get]
+        response = @conf[:client][:engine].get(@conf[:id])
+        expect(response.code).to eq(200)
 
-        1.upto(attempts) do |t|
-            expect(t <= attempts).to be(true)
-            sleep 1
+        runtime = JSON.parse(response.body)
 
-            response = @conf[:client][:engine].get(@conf[:id])
-
-            expect(response.code).to eq(200)
-
-            runtime = JSON.parse(response.body)
-            pp runtime
-
-            case runtime['SERVERLESS_RUNTIME']['FAAS']['STATE']
-            when ProvisionEngine::ServerlessRuntime::FUNCTION_STATES[1]
-                verify_sr_spec(@conf[:specification], runtime)
-                break
-            when ProvisionEngine::ServerlessRuntime::FUNCTION_STATES[3]
-                raise 'FaaS VM failed to deploy'
-            else
-                next
-            end
-        end
+        verify_sr_spec(@conf[:specification], runtime)
     end
 
     it "fail to update #{SR}" do

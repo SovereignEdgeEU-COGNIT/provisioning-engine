@@ -69,7 +69,11 @@ def verify_sr_spec(specification, runtime)
         if specification[role]['DISK_SIZE']
             expect(vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
         end
-        # rubocop:enable Style/StringLiterals
+
+        if vm["#{t}ERROR"]
+            expect(runtime[role]['STATE']).to eq('ERROR')
+            expect(runtime[role]['ERROR']).to eq(vm["#{t}ERROR"])
+        end
     end
 end
 

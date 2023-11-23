@@ -484,8 +484,7 @@ module ProvisionEngine
             xaas_template['VM_ID'] = vm_id
             xaas_template['STATE'] = map_vm_state(vm)
 
-            if xaas_template['STATE'] == FUNCTION_STATES[3] # error
-                # TODO: Test
+            if xaas_template['STATE'] == 'ERROR'
                 if vm["#{t}ERROR"]
                     xaas_template['ERROR'] = vm["#{t}ERROR"]
                 else
