@@ -59,8 +59,6 @@ module ProvisionEngine
             response = ServerlessRuntime.to_service(client, specification)
             return response unless response[0] == 200
 
-            client.logger.debug_dev(response)
-
             service_id = response[1]['DOCUMENT']['ID'].to_i
             specification['SERVICE_ID'] = service_id
 

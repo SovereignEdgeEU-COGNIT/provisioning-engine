@@ -126,7 +126,6 @@ before do
     end
 end
 
-# TODO: Test
 get '/serverless-runtimes/schema' do
     json_response(200, ProvisionEngine::ServerlessRuntime::SCHEMA)
 end
@@ -267,12 +266,10 @@ delete '/serverless-runtimes/:id' do
     end
 end
 
-# TODO: Test
 get '/server/version' do
     json_response(200, VERSION)
 end
 
-# TODO: Test
 get '/server/config' do
     json_response(200, conf)
 end

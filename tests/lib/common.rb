@@ -4,7 +4,7 @@ SR = 'Serverless Runtime'.freeze
 # RSpec methods
 ############################################################################
 
-def examples?(examples, conf, params = nil)
+def load_examples(params = nil)
     include_context(examples, params) if conf[:examples][examples]
 end
 
@@ -84,7 +84,7 @@ def verify_sr_delete(sr_id)
     when 204
         verify_service_delete(sr_id)
     when 423
-        attempts = @conf[:conf][:timeouts][:get]
+        attempts = @conf[:conf][:tests][:timeouts][:get]
         1.upto(attempts) do |t|
             expect(t <= attempts).to be(true)
             sleep 1
@@ -111,7 +111,7 @@ def verify_sr_delete(sr_id)
 end
 
 def verify_service_delete(sr_id)
-    attempts = @conf[:conf][:timeouts][:delete]
+    attempts = @conf[:conf][:tests][:timeouts][:delete]
     1.upto(attempts) do |t|
         expect(t <= attempts).to be(true)
         sleep 1
