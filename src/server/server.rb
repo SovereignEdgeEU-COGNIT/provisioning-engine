@@ -24,7 +24,7 @@ require 'client'
 require 'error'
 require 'runtime'
 
-VERSION = '0.10.0'
+VERSION = '0.10.1'
 
 ############################################################################
 # Define API Helpers

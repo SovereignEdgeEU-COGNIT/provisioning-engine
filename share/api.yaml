@@ -1,6 +1,6 @@
 openapi: "3.0.0"
 info:
-  version: "0.10.0"
+  version: "0.10.1"
   title: "Provisioning Engine REST API"
   description: Provides FaaS capabilities by leveraging features from OpenNebula. Allows to manage Serverless Runtime instances based on a group of Functions defined on request.
 
@@ -28,7 +28,7 @@ paths:
         security: []
         responses:
           '200':
-            description: Serverless Runtime schema retrieved
+            description: Returns the serverless runtime schema
   /serverless-runtimes:
     post:
       summary: Create a Serverless Runtime
@@ -206,7 +206,7 @@ paths:
                 schema:
                   type: string
                 example:
-                  "0.10.0"
+                  "0.10.1"
   /server/config:
       get:
         summary: Retrieve the Provisioning Engine configuration
