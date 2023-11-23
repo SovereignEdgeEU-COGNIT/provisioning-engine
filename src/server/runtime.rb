@@ -493,11 +493,15 @@ module ProvisionEngine
                 end
             end
 
-            if vm["#{nic}EXTERNAL_IP"]
-                xaas_template['ENDPOINT'] = vm["#{nic}EXTERNAL_IP"]
-            else
-                xaas_template['ENDPOINT'] = vm["#{nic}IP"]
+            if nic
+                ['EXTERNAL_IP', 'IP6', 'IP'].each do |address| # Priority order
+                    if vm["#{nic}#{address}"]
+                        xaas_template['ENDPOINT'] = vm["#{nic}#{address}"]
+                        break
+                    end
+                end
             end
+            # No ENDPOINT will result in empty string
             xaas_template['ENDPOINT'] = '' unless xaas_template['ENDPOINT']
 
             xaas_template['CPU'] = vm["#{t}VCPU"].to_i
