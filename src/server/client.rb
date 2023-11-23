@@ -87,7 +87,13 @@ module ProvisionEngine
         end
 
         def service_destroy(id)
-            service_recover(id, { 'delete' => true })
+            response = service_recover(id, { 'delete' => true })
+            return response if response[0] == 204
+
+            # attempt a second recover
+            @logger.error response[1]
+            sleep 1
+            return service_recover(id, { 'delete' => true })
         end
 
         def service_recover(id, options = {})
