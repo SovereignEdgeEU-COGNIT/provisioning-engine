@@ -26,15 +26,13 @@ module ProvisionEngine
             }
         }
 
-        FIXED = {
-            :configuration_path => '/etc/provision-engine/engine.conf'
-        }
+        PATH = '/etc/provision-engine/engine.conf'
 
         def initialize
             replace(DEFAULTS)
 
             begin
-                merge!(YAML.load_file(FIXED[:configuration_path]))
+                merge!(YAML.load_file(PATH))
             rescue StandardError => e
                 STDERR.puts e
             end

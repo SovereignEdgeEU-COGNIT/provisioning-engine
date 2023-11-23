@@ -1,11 +1,16 @@
 module ProvisionEngine
 
+    def self.error?(response)
+        response.is_a?(ProvisionEngine::Error)
+    end
+
     #
     # Error representation give to the Provision Engine Client in case of request error
     # Additional helpers to verify OpenNebula errors by code and message
     #
-    # TODO: schema
     class Error < Array
+
+        SCHEMA = JSON.load_file('/etc/provision-engine/schemas/error.json').freeze
 
         def initialize(code, error, message = '')
             super()
@@ -15,6 +20,10 @@ module ProvisionEngine
                 'error' => error,
                 'message' => message
             }
+        end
+
+        def to_json(*_args)
+            self[1].to_json
         end
 
         def self.wrong_document_type?(code, message)
@@ -51,8 +60,20 @@ module ProvisionEngine
             end
         end
 
-        def to_json
-            self[1].to_json
+        #
+        # Validates the error response using the distributed schema
+        #
+        # @param [Hash] respone an error response
+        #
+        # @return [Bool] whether the error matches the SCHEMA or not
+        #
+        def self.validate(response)
+            begin
+                JSON::Validator.validate!(SCHEMA, response)
+                true
+            rescue JSON::Schema::ValidationError
+                false
+            end
         end
 
     end

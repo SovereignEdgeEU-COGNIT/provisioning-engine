@@ -21,10 +21,10 @@ $LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
 require 'log'
 require 'configuration'
 require 'client'
-require 'runtime'
 require 'error'
+require 'runtime'
 
-VERSION = '0.9.13'
+VERSION = '0.10.0'
 
 ############################################################################
 # Define API Helpers

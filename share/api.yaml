@@ -1,13 +1,15 @@
 openapi: "3.0.0"
 info:
-  version: "0.9.13"
+  version: "0.10.0"
   title: "Provisioning Engine REST API"
   description: Provides FaaS capabilities by leveraging features from OpenNebula. Allows to manage Serverless Runtime instances based on a group of Functions defined on request.
 
 components:
   schemas:
     ServerlessRuntime:
-      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/swagger/schema_sr.json'
+      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/serverless_runtime.json'
+    Error:
+      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/error.json'
   securitySchemes:
     basicAuth:
       type: http

@@ -6,6 +6,7 @@ module ProvisionEngine
     class ServerlessRuntime < OpenNebula::DocumentJSON
 
         DOCUMENT_TYPE = 1337
+        SCHEMA = JSON.load_file('/etc/provision-engine/schemas/serverless_runtime.json').freeze
 
         SR = 'Serverless Runtime'.freeze
         SRD = "#{SR} Document".freeze
@@ -46,127 +47,6 @@ module ProvisionEngine
                 'PROLOG_MIGRATE_UNKNOWN',
                 'PROLOG_MIGRATE_UNKNOWN_FAILURE'
             ]
-        }.freeze
-
-        # TODO: Load json schema from FS. Distribute schema in the installer to /etc/provision-engine/schemas.
-        SCHEMA_SPECIFICATION = {
-            :type => 'object',
-            :properties => {
-                :SERVERLESS_RUNTIME => {
-                    :type => 'object',
-                    :properties => {
-                        :NAME => {
-                            :type => 'string'
-                        },
-                        :ID => {
-                            :type => 'integer'
-                        },
-                        :SERVICE_ID => {
-                            :type => 'integer'
-                        },
-                        :FAAS => {
-                            :type => 'object',
-                            :properties => {
-                                :FLAVOUR => {
-                                    :type => 'string'
-                                },
-                                :CPU => {
-                                    :type => 'number'
-                                },
-                                :VCPU => {
-                                    :type => 'integer'
-                                },
-                                :MEMORY => {
-                                    :type => 'integer'
-                                },
-                                :DISK_SIZE => {
-                                    :type => 'integer'
-                                },
-                                :VM_ID => {
-                                    :type => 'integer'
-                                },
-                                :STATE => {
-                                    :type =>  'string',
-                                    :enum => FUNCTION_STATES
-                                },
-                                :ENDPOINT => {
-                                    'oneOf' => [
-                                        {
-                                            :type => 'string'
-                                        },
-                                        {
-                                            :type => 'null'
-                                        }
-                                    ]
-                                }
-                            },
-                            :required => ['FLAVOUR']
-                        },
-                        :DAAS => {
-                            :type => 'object',
-                            :properties => {
-                                :FLAVOUR => {
-                                    :type => 'string'
-                                },
-                                :CPU => {
-                                    :type => 'number'
-                                },
-                                :VCPU => {
-                                    :type => 'integer'
-                                },
-                                :MEMORY => {
-                                    :type => 'integer'
-                                },
-                                :DISK_SIZE => {
-                                    :type => 'integer'
-                                },
-                                :VM_ID => {
-                                    :type => 'integer'
-                                },
-                                :STATE => {
-                                    :type => 'string',
-                                    :enum => FUNCTION_STATES
-                                },
-                                :ENDPOINT => {
-                                    'oneOf' => [
-                                        {
-                                            :type => 'string'
-                                        },
-                                        {
-                                            :type => 'null'
-                                        }
-                                    ]
-                                }
-                            },
-                            :required => ['FLAVOUR'],
-                            :minProperties => 1
-                        },
-                        :SCHEDULING => {
-                            :type => 'object',
-                            :properties => {
-                                :POLICY => {
-                                    :type => 'string'
-                                },
-                                :REQUIREMENTS => {
-                                    :type => 'string'
-                                }
-                            }
-                        },
-                        :DEVICE_INFO => {
-                            :type => 'object',
-                            :properties => {
-                                :LATENCY_TO_PE => {
-                                    :type => 'integer'
-                                },
-                                :GEOGRAPHIC_LOCATION => {
-                                    :type => 'string'
-                                }
-                            }
-                        }
-                    },
-                    :required => ['FAAS']
-                }
-            }
         }.freeze
 
         attr_accessor :cclient, :body
@@ -271,7 +151,7 @@ module ProvisionEngine
                 error = "#{SERVICE_NO_DELETE} #{service_id}"
                 message = response[1]
 
-                [error, message].each {|i| @cclient.logger.error(i)}
+                [error, message].each {|i| @cclient.logger.error(i) }
 
                 response = @cclient.service_destroy(service_id)
 
@@ -298,13 +178,13 @@ module ProvisionEngine
         #
         # Validates the Serverless Runtime specification using the distributed schema
         #
-        # @param [Hash] specification a valid runtime specification parsed to a Hash
+        # @param [Hash] specification a runtime specification
         #
         # @return [Array] [true,''] or [false, 'reason']
         #
         def self.validate(specification)
             begin
-                JSON::Validator.validate!(SCHEMA_SPECIFICATION, specification)
+                JSON::Validator.validate!(SCHEMA, specification)
                 [200, '']
             rescue JSON::Schema::ValidationError => e
                 ProvisionEngine::Error.new(400, "Invalid #{SR} specification", e.message)
@@ -539,7 +419,6 @@ module ProvisionEngine
             disk_size = role_specification['DISK_SIZE']
             xaas = []
 
-            xaas << "CPU=#{role_specification['CPU']}" if role_specification['CPU']
             xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
             xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
 
@@ -556,10 +435,11 @@ module ProvisionEngine
                 xaas << "DISK=[#{disk_template}]"
             end
 
-            if role_specification['VCPU']
-                xaas << "VCPU=#{role_specification['VCPU']}"
+            if role_specification['CPU']
+                xaas << "CPU=#{role_specification['CPU']}"
+                xaas << "VCPU=#{role_specification['CPU']}"
 
-                vcpu_max = role_specification['VCPU'] * conf_capacity[:max][:vcpu_mult]
+                vcpu_max = role_specification['CPU'] * conf_capacity[:max][:vcpu_mult]
             else # get upper limit from mult * vm_template_vcpu
                 vcpu = vm_template['//TEMPLATE/VCPU'].to_i
                 vcpu = conf_capacity[:default][:vcpu] if vcpu.zero?
@@ -619,8 +499,8 @@ module ProvisionEngine
                 xaas_template['ENDPOINT'] = vm["#{nic}IP"]
             end
 
-            xaas_template['CPU'] = vm["#{t}CPU"].to_f
-            xaas_template['VCPU'] = vm["#{t}VCPU"].to_i
+            xaas_template['ENDPOINT'] = '' unless xaas_template['ENDPOINT']
+            xaas_template['CPU'] = vm["#{t}VCPU"].to_i
             xaas_template['MEMORY'] = vm["#{t}MEMORY"].to_i
             xaas_template['DISK_SIZE'] = vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i
 

@@ -56,7 +56,7 @@ def verify_sr_spec(specification, runtime)
             expect(vm["//TEMPLATE/#{capacity}"].to_f).to eq(specification[role][capacity].to_f)
         end
 
-        expect(runtime[role]['ENDPOINT']).to eq(vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"])
+        expect(runtime[role]['ENDPOINT']).to eq(vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"].to_s)
 
         if specification[role]['DISK_SIZE']
             expect(vm["//TEMPLATE/DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
