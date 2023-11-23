@@ -140,7 +140,7 @@ module ProvisionEngine
 
             @cclient.logger.warning(SRS_NOT_FOUND) if rc == 404
 
-            if rc != 204
+            if ![204, 404].include?(rc)
                 error = "#{SERVICE_NO_DELETE} #{service_id}"
                 message = response[1]
 
