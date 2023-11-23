@@ -10,7 +10,6 @@ module ProvisionEngine
 
         SR = 'Serverless Runtime'.freeze
         SRD = "#{SR} Document".freeze
-        SRD_NOT_FOUND = "#{SRD} not found".freeze
         SRS = "#{SR} Service".freeze
         SRS_NOT_FOUND = "#{SRS} not found".freeze
         SRS_NO_READ = "Failed to read #{SRS}".freeze
@@ -99,8 +98,6 @@ module ProvisionEngine
             [201, runtime]
         end
 
-        # TODO: make sure other documents cannot be read
-        # TODO: make test for it
         def self.get(client, id)
             document = ServerlessRuntime.new_with_id(id, client.client_oned)
             response = document.info
@@ -110,8 +107,8 @@ module ProvisionEngine
 
                 if rc == 404 || ProvisionEngine::Error.wrong_document_type?(rc, response.message)
                     rc = 404 if rc != 404
-                    error = SRD_NOT_FOUND
-                    message = nil
+                    error = SR_NOT_FOUND
+                    message = ''
                 else
                     error = "Failed to read #{SRD}"
                     message = response.message
@@ -132,8 +129,6 @@ module ProvisionEngine
             [200, runtime]
         end
 
-        # TODO: make sure other documents cannot be deleted
-        # TODO: make test for it
         def delete
             raise "Missing #{SR} Cloud Client" unless @cclient
 
@@ -481,10 +476,6 @@ module ProvisionEngine
 
             return response unless rc == 200
 
-            # TODO: Handle possible missing values in VM Template
-            # nil values should be removed to comply with the schema
-            # endpoint being null should be yeeted as well
-
             vm = rb
             xaas_template = {}
             t = '//TEMPLATE/'
@@ -493,13 +484,22 @@ module ProvisionEngine
             xaas_template['VM_ID'] = vm_id
             xaas_template['STATE'] = map_vm_state(vm)
 
+            if xaas_template['STATE'] == FUNCTION_STATES[3] # error
+                # TODO: Test
+                if vm["#{t}ERROR"]
+                    xaas_template['ERROR'] = vm["#{t}ERROR"]
+                else
+                    xaas_template['ERROR'] = 'No VM Error from Cloud Edge Manager'
+                end
+            end
+
             if vm["#{nic}EXTERNAL_IP"]
                 xaas_template['ENDPOINT'] = vm["#{nic}EXTERNAL_IP"]
             else
                 xaas_template['ENDPOINT'] = vm["#{nic}IP"]
             end
-
             xaas_template['ENDPOINT'] = '' unless xaas_template['ENDPOINT']
+
             xaas_template['CPU'] = vm["#{t}VCPU"].to_i
             xaas_template['MEMORY'] = vm["#{t}MEMORY"].to_i
             xaas_template['DISK_SIZE'] = vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i

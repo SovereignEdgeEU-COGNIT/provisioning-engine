@@ -113,6 +113,10 @@ def verify_service_delete(sr_id)
     end
 end
 
+def verify_error(body)
+    expect(ProvisionEngine.error?(body)).to be(true)
+end
+
 ############################################################################
 # Helpers
 ############################################################################

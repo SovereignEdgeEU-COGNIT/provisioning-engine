@@ -43,6 +43,10 @@
               "description": "The state of the VM containing the Function Runtime",
               "enum": ["PENDING", "RUNNING", "UPDATING", "ERROR"]
             },
+            "ERROR": {
+              "type": "string",
+              "description": "The error message of the VM containing the Function Runtime"
+            },
             "ENDPOINT": {
               "type": "string",
               "description": "HTTP URL of the Function Runtime. Will be empty if the VM has no network"
@@ -75,6 +79,10 @@
               "type": "string",
               "description": "The state of the VM containing the Function Runtime",
               "enum": ["PENDING", "RUNNING", "UPDATING", "ERROR"]
+            },
+            "ERROR": {
+              "type": "string",
+              "description": "The error message of the VM containing the Function Runtime"
             },
             "ENDPOINT": {
               "type": "string",

@@ -17,6 +17,7 @@ require 'opennebula/oneflow_client'
 # Engine libraries
 require_relative '../src/client/client'
 require_relative '../src/server/runtime'
+require_relative '../src/server/error'
 
 $LOAD_PATH << "#{__dir__}/lib" # Test libraries
 require 'common'

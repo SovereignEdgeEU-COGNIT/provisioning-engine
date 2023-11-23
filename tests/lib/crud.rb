@@ -50,6 +50,7 @@ RSpec.shared_context 'crud' do |sr_template|
 
         body = JSON.parse(response.body)
 
+        verify_error(body)
         expect(body['error']).to eq('Serverless Runtime update not implemented')
     end
 

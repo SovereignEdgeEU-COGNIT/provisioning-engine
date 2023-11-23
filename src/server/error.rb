@@ -1,7 +1,19 @@
 module ProvisionEngine
 
+    #
+    # Validates the error response using the distributed schema
+    #
+    # @param [Hash] respone an error response
+    #
+    # @return [Bool] whether the error matches the SCHEMA or not
+    #
     def self.error?(response)
-        response.is_a?(ProvisionEngine::Error)
+        # begin
+            JSON::Validator.validate!(Error::SCHEMA, response)
+        #     true
+        # rescue JSON::Schema::ValidationError
+        #     false
+        # end
     end
 
     #
@@ -57,22 +69,6 @@ module ProvisionEngine
                 404
             else
                 500
-            end
-        end
-
-        #
-        # Validates the error response using the distributed schema
-        #
-        # @param [Hash] respone an error response
-        #
-        # @return [Bool] whether the error matches the SCHEMA or not
-        #
-        def self.validate(response)
-            begin
-                JSON::Validator.validate!(SCHEMA, response)
-                true
-            rescue JSON::Schema::ValidationError
-                false
             end
         end
 

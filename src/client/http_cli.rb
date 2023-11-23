@@ -2,13 +2,13 @@
 
 require 'net/http'
 require 'json'
+require 'yaml'
 require 'uri'
 
 class SimpleHttpClient
 
-    # TODO: Load from ~/.provision_engine_auth
-    USERNAME = 'oneadmin'
-    PASSWORD = 'opennebula'
+    auth = YAML.load_file("#{Dir.home}/.provision_engine_auth")
+    USERNAME, PASSWORD = auth.split(':')
 
     def initialize(url)
         @uri = URI.parse(url)
