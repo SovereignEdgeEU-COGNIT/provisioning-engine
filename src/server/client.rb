@@ -109,6 +109,11 @@ module ProvisionEngine
             service['DOCUMENT']['TEMPLATE']['BODY']['state']
         end
 
+        def service_pool_get
+            response = @client_oneflow.get('/service')
+            return_http_response(response)
+        end
+
         def service_template_get(id)
             response = @client_oneflow.get("/service_template/#{id}")
             return_http_response(response)

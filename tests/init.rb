@@ -77,7 +77,28 @@ RSpec.describe 'Provision Engine API' do
             include_context(examples)
         end
     end
+
     after(:all) do
-        # TODO: Skip if oneadmin
+        if rspec_conf[:conf][:tests][:purge]
+            require 'client'
+            require 'log'
+            require 'logger'
+
+            client = ProvisionEngine::CloudClient.new(conf_engine, auth)
+            response = client.service_pool_get
+            expect(response[0]).to eq(200)
+
+            document_pool = response[1]['DOCUMENT_POOL']
+            if !document_pool.empty?
+                pp "Found leftover services as the user #{auth.split(':')[0]}"
+
+                document_pool['DOCUMENT'].each do |service|
+                    pp "#{service['ID']}: #{service['NAME']}"
+
+                    response = client.service_destroy(service['ID'])
+                    expect([204, 404].include?(response[0])).to be(true)
+                end
+            end
+        end
     end
 end
