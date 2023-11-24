@@ -16,7 +16,7 @@ module ProvisionEngine
                 :error => :err, :warning => :warning, :info => :info, :debug => :debug
             }
         }
-        SEP = '-----------------------'
+        SEP = '-'*32
 
         #
         # @param [Hash] config Log configuration as defined in engine.conf

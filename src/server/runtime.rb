@@ -59,8 +59,6 @@ module ProvisionEngine
             response = ServerlessRuntime.to_service(client, specification)
             return response unless response[0] == 200
 
-            client.logger.debug_dev(response)
-
             service_id = response[1]['DOCUMENT']['ID'].to_i
             specification['SERVICE_ID'] = service_id
 
@@ -142,7 +140,7 @@ module ProvisionEngine
 
             @cclient.logger.warning(SRS_NOT_FOUND) if rc == 404
 
-            if rc != 204
+            if ![204, 404].include?(rc)
                 error = "#{SERVICE_NO_DELETE} #{service_id}"
                 message = response[1]
 
@@ -484,8 +482,7 @@ module ProvisionEngine
             xaas_template['VM_ID'] = vm_id
             xaas_template['STATE'] = map_vm_state(vm)
 
-            if xaas_template['STATE'] == FUNCTION_STATES[3] # error
-                # TODO: Test
+            if xaas_template['STATE'] == 'ERROR'
                 if vm["#{t}ERROR"]
                     xaas_template['ERROR'] = vm["#{t}ERROR"]
                 else
@@ -493,11 +490,15 @@ module ProvisionEngine
                 end
             end
 
-            if vm["#{nic}EXTERNAL_IP"]
-                xaas_template['ENDPOINT'] = vm["#{nic}EXTERNAL_IP"]
-            else
-                xaas_template['ENDPOINT'] = vm["#{nic}IP"]
+            if nic
+                ['EXTERNAL_IP', 'IP6', 'IP'].each do |address| # Priority order
+                    if vm["#{nic}#{address}"]
+                        xaas_template['ENDPOINT'] = vm["#{nic}#{address}"]
+                        break
+                    end
+                end
             end
+            # No ENDPOINT will result in empty string
             xaas_template['ENDPOINT'] = '' unless xaas_template['ENDPOINT']
 
             xaas_template['CPU'] = vm["#{t}VCPU"].to_i

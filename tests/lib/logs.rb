@@ -1,4 +1,4 @@
-RSpec.shared_context 'inspect logs' do
+RSpec.shared_context 'logs' do
     it 'print every log' do
         logcation = '/var/log/provision-engine'
         sep = '-'*32

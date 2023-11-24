@@ -1,10 +1,10 @@
-# How long to wait for the operation expected result before raising timeout error
-:timeouts:
+:timeouts: # How long to wait for the operation expected result before raising timeout error
   :get: 60
   :delete: 30
-# What group of examples should be tested
-:examples:
-  'auth': true
+:examples: # What group of examples should be tested
   'crud': true
+  'auth': true
   'crud_invalid': true
-  'inspect logs': true
+  'server_info': true
+  'logs': true
+:purge: true # delete services owned by the user running the tests. DO NOT RUN AS ONEADMIN !!!

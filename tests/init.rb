@@ -15,16 +15,13 @@ require 'opennebula'
 require 'opennebula/oneflow_client'
 
 # Engine libraries
+$LOAD_PATH << "#{__dir__}/../src/server"
+require 'runtime'
+require 'error'
 require_relative '../src/client/client'
-require_relative '../src/server/runtime'
-require_relative '../src/server/error'
 
 $LOAD_PATH << "#{__dir__}/lib" # Test libraries
 require 'common'
-require 'log'
-require 'crud'
-require 'auth'
-require 'crud_invalid'
 
 ############################################################################
 # Initialize rspec configuration
@@ -39,7 +36,10 @@ flow_client_args = {
 }
 
 rspec_conf = {
-    :conf => YAML.load_file('./conf.yaml'),
+    :conf => {
+        :tests => YAML.load_file('./conf.yaml'),
+        :engine => conf_engine
+    },
     :client => {
         :engine => ProvisionEngine::Client.new(endpoint, auth),
         :oned => OpenNebula::Client.new(auth, conf_engine[:one_xmlrpc]),
@@ -55,22 +55,50 @@ RSpec.configure {|c| c.before { @conf = rspec_conf } }
 ############################################################################
 RSpec.describe 'Provision Engine API' do
     include Rack::Test::Methods
+    tests = rspec_conf[:conf][:tests][:examples]
 
-    examples?('auth', rspec_conf[:conf])
-    examples?('crud_invalid', rspec_conf[:conf])
+    if tests['crud']
+        require 'crud'
 
-    # test every serverless runtime template under templates directory
-    Dir.entries("#{__dir__}/templates").select do |sr_template|
-        # blacklist template from tests by changing preffix or suffix
-        next unless sr_template.start_with?('sr_') && sr_template.end_with?('.json')
+        # test every serverless runtime template under templates directory
+        Dir.entries("#{__dir__}/templates").select do |sr_template|
+            # blacklist template from tests by changing preffix or suffix
+            next unless sr_template.start_with?('sr_') && sr_template.end_with?('.json')
 
-        examples?('crud', rspec_conf[:conf], sr_template)
+            include_context('crud', sr_template)
+        end
     end
 
-    examples?('inspect logs', rspec_conf[:conf])
+    tests.each do |examples, enabled|
+        next if examples == 'crud'
 
-    # cleanup possible leftover services for the test user ENV['TESTS_AUTH'][0]
+        if enabled
+            require examples
+            include_context(examples)
+        end
+    end
+
     after(:all) do
-        # TODO: Skip if oneadmin
+        if rspec_conf[:conf][:tests][:purge]
+            require 'client'
+            require 'log'
+            require 'logger'
+
+            client = ProvisionEngine::CloudClient.new(conf_engine, auth)
+            response = client.service_pool_get
+            expect(response[0]).to eq(200)
+
+            document_pool = response[1]['DOCUMENT_POOL']
+            if !document_pool.empty?
+                pp "Found leftover services as the user #{auth.split(':')[0]}"
+
+                document_pool['DOCUMENT'].each do |service|
+                    pp "#{service['ID']}: #{service['NAME']}"
+
+                    response = client.service_destroy(service['ID'])
+                    expect([204, 404].include?(response[0])).to be(true)
+                end
+            end
+        end
     end
 end

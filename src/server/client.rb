@@ -87,7 +87,13 @@ module ProvisionEngine
         end
 
         def service_destroy(id)
-            service_recover(id, { 'delete' => true })
+            response = service_recover(id, { 'delete' => true })
+            return response if response[0] == 204
+
+            # attempt a second recover
+            @logger.error response[1]
+            sleep 1
+            return service_recover(id, { 'delete' => true })
         end
 
         def service_recover(id, options = {})
@@ -107,6 +113,11 @@ module ProvisionEngine
 
         def service_state(service)
             service['DOCUMENT']['TEMPLATE']['BODY']['state']
+        end
+
+        def service_pool_get
+            response = @client_oneflow.get('/service')
+            return_http_response(response)
         end
 
         def service_template_get(id)

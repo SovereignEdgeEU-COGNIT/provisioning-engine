@@ -4,7 +4,7 @@ SR = 'Serverless Runtime'.freeze
 # RSpec methods
 ############################################################################
 
-def examples?(examples, conf, params = nil)
+def load_examples(params = nil)
     include_context(examples, params) if conf[:examples][examples]
 end
 
@@ -30,11 +30,15 @@ def verify_sr_spec(specification, runtime)
     response = @conf[:client][:oneflow].get("/service/#{runtime['SERVICE_ID']}")
     expect(response.code.to_i).to eq(200)
 
+    t = '//TEMPLATE/'
+
     ['FAAS', 'DAAS'].each do |role|
         next unless specification[role] && !specification[role]['FLAVOUR'].empty?
 
         vm = OpenNebula::VirtualMachine.new_with_id(runtime[role]['VM_ID'], @conf[:client][:oned])
         raise "Error getting #{SR} VM" if OpenNebula.is_error?(vm.info)
+
+        nic = "#{t}NIC[NIC_ID=\"0\"]/"
 
         # mandatory role information exists
         ['FLAVOUR', 'VM_ID', 'STATE', 'ENDPOINT'].each do |mandatory|
@@ -48,20 +52,28 @@ def verify_sr_spec(specification, runtime)
             expect(runtime[role][optional]).to eq(specification[role][optional])
         end
 
-        # rubocop:disable Style/StringLiterals
         # verify VM has correct resources
         ['CPU', 'VCPU', 'MEMORY'].each do |capacity|
             next unless specification[role][capacity]
 
-            expect(vm["//TEMPLATE/#{capacity}"].to_f).to eq(specification[role][capacity].to_f)
+            expect(vm["#{t}#{capacity}"].to_f).to eq(specification[role][capacity].to_f)
         end
 
-        expect(runtime[role]['ENDPOINT']).to eq(vm["//TEMPLATE/NIC[NIC_ID=\"0\"]/IP"].to_s)
+        ['EXTERNAL_IP', 'IP6', 'IP'].each do |address|
+            if vm["#{nic}#{address}"]
+                expect(runtime[role]['ENDPOINT']).to eq(vm["#{nic}#{address}"])
+                break
+            end
+        end
 
         if specification[role]['DISK_SIZE']
-            expect(vm["//TEMPLATE/DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
+            expect(vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
         end
-        # rubocop:enable Style/StringLiterals
+
+        if vm["#{t}ERROR"]
+            expect(runtime[role]['STATE']).to eq('ERROR')
+            expect(runtime[role]['ERROR']).to eq(vm["#{t}ERROR"])
+        end
     end
 end
 
@@ -72,7 +84,7 @@ def verify_sr_delete(sr_id)
     when 204
         verify_service_delete(sr_id)
     when 423
-        attempts = @conf[:conf][:timeouts][:get]
+        attempts = @conf[:conf][:tests][:timeouts][:get]
         1.upto(attempts) do |t|
             expect(t <= attempts).to be(true)
             sleep 1
@@ -99,7 +111,7 @@ def verify_sr_delete(sr_id)
 end
 
 def verify_service_delete(sr_id)
-    attempts = @conf[:conf][:timeouts][:delete]
+    attempts = @conf[:conf][:tests][:timeouts][:delete]
     1.upto(attempts) do |t|
         expect(t <= attempts).to be(true)
         sleep 1

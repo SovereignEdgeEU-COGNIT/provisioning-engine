@@ -24,7 +24,7 @@ require 'client'
 require 'error'
 require 'runtime'
 
-VERSION = '0.10.0'
+VERSION = '0.10.1'
 
 ############################################################################
 # Define API Helpers
@@ -127,7 +127,7 @@ before do
 end
 
 get '/serverless-runtimes/schema' do
-    json_response(200, ProvisionEngine::ServerlessRuntime::SCHEMA_SPECIFICATION)
+    json_response(200, ProvisionEngine::ServerlessRuntime::SCHEMA)
 end
 
 post '/serverless-runtimes' do
@@ -264,10 +264,6 @@ delete '/serverless-runtimes/:id' do
         log_response('error', 500, rb, NO_DELETE)
         halt 500, json_response(500, rb)
     end
-end
-
-get '/engine/version' do
-    json_response(200, VERSION)
 end
 
 get '/server/version' do
