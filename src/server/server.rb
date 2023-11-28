@@ -16,92 +16,19 @@ require 'opennebula'
 require 'opennebula/oneflow_client'
 require 'opennebula/../models/service'
 
-$LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
 # Engine libraries
+$LOAD_PATH << '/opt/provision-engine/' # install dir defined on install.sh
 require 'log'
 require 'configuration'
 require 'client'
 require 'error'
 require 'runtime'
 
-VERSION = '0.10.1'
-
-############################################################################
-# Define API Helpers
-############################################################################
-RC = 'Response HTTP Return Code'.freeze
-PE = 'Provisioning Engine'.freeze
-SR = 'Serverless Runtime'.freeze
-DENIED = 'Permission denied'.freeze
-NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
-SRD = "#{SR} definition".freeze
-SR_NOT_FOUND = "#{SR} not found".freeze
-NO_DELETE = "Failed to delete #{SR}".freeze
-
-# Helper method to return JSON responses
-def json_response(response_code, data)
-    content_type :json
-    status response_code
-    data.to_json
-end
-
-def auth?
-    auth_header = request.env['HTTP_AUTHORIZATION']
-
-    if auth_header.nil?
-        rc = 401
-        error = 'Authentication required'
-
-        settings.logger.error(error)
-        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
-    end
-
-    if auth_header.start_with?('Basic ')
-        encoded_credentials = auth_header.split(' ')[1]
-        username, password = Base64.decode64(encoded_credentials).split(':')
-    else
-        rc = 401
-        error = 'Unsupported authentication scheme'
-
-        [error, auth_header].each {|i| settings.logger.error(i) }
-        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, auth_header))
-    end
-
-    "#{username}:#{password}"
-end
-
-def body_valid?
-    begin
-        JSON.parse(request.body.read)
-    rescue JSON::ParserError => e
-        rc = 400
-        error = 'Invalid JSON'
-
-        [error, e.message].each {|i| settings.logger.error(i) }
-        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, e.message))
-    end
-end
-
-def log_request(type)
-    settings.logger.info("Received request to #{type}")
-end
-
-def log_response(level, code, data, message)
-    if data.is_a?(String)
-        body = data
-    else
-        body = data.to_json
-    end
-
-    settings.logger.info("#{RC}: #{code}")
-    settings.logger.send(level, message)
-    settings.logger.debug("Response Body: #{body}")
-end
-
 ############################################################################
 # API configuration
 ############################################################################
 
+VERSION = '0.10.1'
 conf = ProvisionEngine::Configuration.new
 
 configure do
@@ -272,4 +199,76 @@ end
 
 get '/server/config' do
     json_response(200, conf)
+end
+
+############################################################################
+# Define API Helpers
+############################################################################
+RC = 'Response HTTP Return Code'.freeze
+PE = 'Provisioning Engine'.freeze
+SR = 'Serverless Runtime'.freeze
+DENIED = 'Permission denied'.freeze
+NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
+SRD = "#{SR} definition".freeze
+SR_NOT_FOUND = "#{SR} not found".freeze
+NO_DELETE = "Failed to delete #{SR}".freeze
+
+# Helper method to return JSON responses
+def json_response(response_code, data)
+    content_type :json
+    status response_code
+    data.to_json
+end
+
+def auth?
+    auth_header = request.env['HTTP_AUTHORIZATION']
+
+    if auth_header.nil?
+        rc = 401
+        error = 'Authentication required'
+
+        settings.logger.error(error)
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
+    end
+
+    if auth_header.start_with?('Basic ')
+        encoded_credentials = auth_header.split(' ')[1]
+        username, password = Base64.decode64(encoded_credentials).split(':')
+    else
+        rc = 401
+        error = 'Unsupported authentication scheme'
+
+        [error, auth_header].each {|i| settings.logger.error(i) }
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, auth_header))
+    end
+
+    "#{username}:#{password}"
+end
+
+def body_valid?
+    begin
+        JSON.parse(request.body.read)
+    rescue JSON::ParserError => e
+        rc = 400
+        error = 'Invalid JSON'
+
+        [error, e.message].each {|i| settings.logger.error(i) }
+        halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, e.message))
+    end
+end
+
+def log_request(type)
+    settings.logger.info("Received request to #{type}")
+end
+
+def log_response(level, code, data, message)
+    if data.is_a?(String)
+        body = data
+    else
+        body = data.to_json
+    end
+
+    settings.logger.info("#{RC}: #{code}")
+    settings.logger.send(level, message)
+    settings.logger.debug("Response Body: #{body}")
 end
