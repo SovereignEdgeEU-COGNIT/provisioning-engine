@@ -227,7 +227,7 @@ paths:
                   port: 1337
                   capacity:
                     max:
-                      vcpu_mult: 2
+                      cpu_mult: 2
                       memory_mult: 2
                     default:
                       vcpu: 2

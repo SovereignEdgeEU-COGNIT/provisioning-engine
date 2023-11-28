@@ -11,13 +11,16 @@ module ProvisionEngine
             :host => '127.0.0.1',
             :port => 1337,
             :capacity => {
-                :max => {
-                    :vcpu_mult => 2,
-                    :memory_mult => 2
+                :disk => {
+                    :default => 1024
                 },
-                :default => {
-                    :vcpu => 2,
-                    :memory => 1024
+                :cpu => {
+                    :default => 2,
+                    :mult => 2
+                },
+                :memory => {
+                    :default => 1024,
+                    :mult => 2
                 }
             },
             :log => {
@@ -28,6 +31,7 @@ module ProvisionEngine
 
         PATH = '/etc/provision-engine/engine.conf'
 
+        # TODO: Validate config values type on load
         def initialize
             replace(DEFAULTS)
 

@@ -309,7 +309,14 @@ module ProvisionEngine
                             return ProvisionEngine::Error.new(rc, error, rb)
                         end
 
-                        override = function_requierements(specification[role], rb,
+                        vm_template = rb
+
+                        if !vm_template.template_like_str('//TEMPLATE/DISK')
+                            error = 'Function VM template does not have associated DISK'
+                            return ProvisionEngine::Error.new(500, error)
+                        end
+
+                        override = function_requierements(specification[role], vm_template,
                                                           client.conf[:capacity])
 
                         client.logger.info("Applying vm_template_contents to role #{role}")
@@ -410,48 +417,41 @@ module ProvisionEngine
         #
         def self.function_requierements(role_specification, vm_template, conf_capacity)
             disk_size = role_specification['DISK_SIZE']
+            disk_size ||= conf_capacity[:disk][:default]
+
+            disk = vm_template.template_like_str('//TEMPLATE/DISK')
+            if disk.include?('SIZE=')
+                disk.sub!("SIZE=\d+", "SIZE=\"#{disk_size}\"")
+            else
+                disk << "\n#{"SIZE=\"#{disk_size}\""}"
+            end
+            disk.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
+
+            cpu = role_specification['CPU']
+            if !cpu
+                cpu = vm_template['//TEMPLATE/VCPU'].to_i
+                cpu = conf_capacity[:cpu][:default] if cpu.zero?
+            end
+
+            memory = role_specification['MEMORY']
+            if !memory
+                memory = vm_template['//TEMPLATE/MEMORY'].to_i
+                memory = conf_capacity[:memory][:default] if memory.zero?
+            end
+
+            memory_max = memory * conf_capacity[:memory][:mult]
+            vcpu_max = cpu * conf_capacity[:cpu][:mult]
+
             xaas = []
 
-            xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
-            xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
-
-            if disk_size
-                disk_template = vm_template.template_like_str('//TEMPLATE/DISK')
-
-                if disk_template.include?('SIZE=')
-                    disk_template.sub!("SIZE=\d+", "SIZE=\"#{disk_size}\"")
-                else
-                    disk_template << "\n#{"SIZE=\"#{disk_size}\""}"
-                end
-
-                disk_template.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
-                xaas << "DISK=[#{disk_template}]"
-            end
-
-            if role_specification['CPU']
-                xaas << "CPU=#{role_specification['CPU']}"
-                xaas << "VCPU=#{role_specification['CPU']}"
-
-                vcpu_max = role_specification['CPU'] * conf_capacity[:max][:vcpu_mult]
-            else # get upper limit from mult * vm_template_vcpu
-                vcpu = vm_template['//TEMPLATE/VCPU'].to_i
-                vcpu = conf_capacity[:default][:vcpu] if vcpu.zero?
-
-                vcpu_max = vcpu * conf_capacity[:max][:vcpu_mult]
-            end
-            if role_specification['MEMORY']
-                xaas << "MEMORY=#{role_specification['MEMORY']}"
-
-                memory_max = role_specification['MEMORY'] * conf_capacity[:max][:memory_mult]
-            else # get upper limit from mult * vm_template_memory
-                memory = vm_template['//TEMPLATE/MEMORY'].to_i
-                memory = conf_capacity[:default][:memory] if memory.zero?
-
-                memory_max = memory * conf_capacity[:max][:memory_mult]
-            end
-
-            xaas << "VCPU_MAX= \"#{vcpu_max}\""
-            xaas << "MEMORY_MAX=\"#{memory_max}\""
+            xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=YES,\nMEMORY_HOT_ADD_ENABLED=YES]"
+            xaas << "MEMORY_RESIZE_MODE=#{conf_capacity[:memory][:resize_mode]}"
+            xaas << "DISK=[#{disk}]"
+            xaas << "CPU=#{cpu}"
+            xaas << "VCPU=#{cpu}" # CPU = VCPU 1:1 ratio
+            xaas << "MEMORY=#{memory}"
+            xaas << "VCPU_MAX=#{vcpu_max}"
+            xaas << "MEMORY_MAX=#{memory_max}"
 
             xaas.join("\n")
         end
@@ -498,7 +498,7 @@ module ProvisionEngine
                     end
                 end
             end
-            # No ENDPOINT will result in empty string
+            # No NIC in Function VM Template will result in empty string
             xaas_template['ENDPOINT'] = '' unless xaas_template['ENDPOINT']
 
             xaas_template['CPU'] = vm["#{t}VCPU"].to_i
