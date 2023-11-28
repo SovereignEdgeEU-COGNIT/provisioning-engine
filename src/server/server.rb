@@ -108,8 +108,10 @@ get '/serverless-runtimes/:id' do
 
     case rc
     when 200
-        log_response('info', rc, rb, "#{SR} retrieved")
-        json_response(rc, rb.to_sr)
+        document = rb
+
+        log_response('info', rc, document, "#{SR} retrieved")
+        json_response(rc, document.to_sr)
     when 401
         log_response('error', rc, rb, NO_AUTH)
         halt rc, json_response(rc, rb)
@@ -128,20 +130,51 @@ end
 put '/serverless-runtimes/:id' do
     log_request("Update a #{SR}")
 
-    rc = 501
-    error = "#{SR} update not implemented"
-
-    settings.logger.error(error)
-    halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
-
     auth = auth?
     specification = body_valid?
 
     client = ProvisionEngine::CloudClient.new(conf, auth)
-
     id = params[:id].to_i
 
-    ProvisionEngine::ServerlessRuntime.update(client, id, specification)
+    response = ProvisionEngine::ServerlessRuntime.get(client, id)
+    rc = response[0]
+    rb = response[1]
+
+    case rc
+    when 200
+        document = rb
+
+        response = document.update_sr(specification)
+        rc = response[0]
+        rb = response[1]
+
+        case rc
+        when 200
+            log_response('info', rc, rb, "#{SR} updated")
+            json_response(rc, document.to_sr)
+        when 403
+            log_response('error', rc, rb, DENIED)
+            halt rc, json_response(rc, rb)
+        when 423
+            log_response('error', rc, rb, NO_UPDATE)
+            halt rc, json_response(rc, rb)
+        else
+            log_response('error', 500, rb, NO_UPDATE)
+            halt 500, json_response(500, rb)
+        end
+    when 401
+        log_response('error', rc, rb, NO_AUTH)
+        halt rc, json_response(rc, rb)
+    when 403
+        log_response('error', rc, rb, DENIED)
+        halt rc, json_response(rc, rb)
+    when 404
+        log_response('error', rc, rb, SR_NOT_FOUND)
+        halt rc, json_response(rc, rb)
+    else
+        log_response('error', 500, rb, NO_UPDATE)
+        halt 500, json_response(500, rb)
+    end
 end
 
 delete '/serverless-runtimes/:id' do
@@ -212,6 +245,7 @@ NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
 SRD = "#{SR} definition".freeze
 SR_NOT_FOUND = "#{SR} not found".freeze
 NO_DELETE = "Failed to delete #{SR}".freeze
+NO_UPDATE = "Failed to delete #{SR}".freeze
 
 # Helper method to return JSON responses
 def json_response(response_code, data)
