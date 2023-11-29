@@ -10,6 +10,7 @@ module ProvisionEngine
             :oneflow_server => 'http://localhost:2474',
             :host => '127.0.0.1',
             :port => 1337,
+            :timeout => 30,
             :capacity => {
                 :disk => {
                     :default => 1024

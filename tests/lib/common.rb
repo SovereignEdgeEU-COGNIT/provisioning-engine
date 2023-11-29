@@ -32,7 +32,7 @@ def verify_sr_spec(specification, runtime)
 
     t = '//TEMPLATE/'
 
-    ['FAAS', 'DAAS'].each do |role|
+    ProvisionEngine::Function::FUNCTIONS.each do |role|
         next unless specification[role] && !specification[role]['FLAVOUR'].empty?
 
         vm = OpenNebula::VirtualMachine.new_with_id(runtime[role]['VM_ID'], @conf[:client][:oned])

@@ -24,8 +24,8 @@ install() {
 		[ -f "$EXEC_PATH" ] || sudo cp "$src_exec" "$EXEC_PATH"
 
 		# libraries
-		for file in $modules; do
-			[ -f "$INSTALL_DIR/${file}" ] || cp "$(realpath "src/server/${file}")" "${INSTALL_DIR}"
+		for file in $modules_rb; do
+			[ -f "$INSTALL_DIR/${file}" ] || cp "$(realpath "src/server/${file}.rb")" "${INSTALL_DIR}"
 		done
 	elif [[ $setup_mode == "symlink" ]]; then
 		# config
@@ -38,8 +38,8 @@ install() {
 		[ -L "$EXEC_PATH" ] || sudo ln -s "$src_exec" "$EXEC_PATH"
 
 		# libraries
-		for file in $modules; do
-			[ -L "$INSTALL_DIR/${file}" ] || ln -s "$(realpath "src/server/${file}")" "${INSTALL_DIR}"
+		for file in $modules_rb; do
+			[ -L "$INSTALL_DIR/${file}" ] || ln -s "$(realpath "src/server/${file}.rb")" "${INSTALL_DIR}"
 		done
 	fi
 }
@@ -84,7 +84,7 @@ EXEC_FILE="provision-engine-server"
 EXEC_PATH="/usr/local/bin/${EXEC_FILE}"
 
 INSTALL_DIR="/opt/provision-engine"
-modules="client.rb configuration.rb log.rb server.rb runtime.rb error.rb"
+modules_rb="client configuration log server runtime error function"
 
 gems=("opennebula" "sinatra" "logger" "json-schema") # check requires on server.rb
 

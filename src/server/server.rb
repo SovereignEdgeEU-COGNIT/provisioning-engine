@@ -23,6 +23,7 @@ require 'configuration'
 require 'client'
 require 'error'
 require 'runtime'
+require 'function'
 
 ############################################################################
 # API configuration
@@ -245,7 +246,7 @@ NO_AUTH = 'Failed to authenticate in OpenNebula'.freeze
 SRD = "#{SR} definition".freeze
 SR_NOT_FOUND = "#{SR} not found".freeze
 NO_DELETE = "Failed to delete #{SR}".freeze
-NO_UPDATE = "Failed to delete #{SR}".freeze
+NO_UPDATE = "Failed to update #{SR}".freeze
 
 # Helper method to return JSON responses
 def json_response(response_code, data)
