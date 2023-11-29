@@ -10,6 +10,8 @@ components:
       $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/serverless_runtime.json'
     Error:
       $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/error.json'
+    Config:
+      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/config.json'
   securitySchemes:
     basicAuth:
       type: http
@@ -220,18 +222,4 @@ paths:
               application/json:
                 schema:
                   type: object
-                example:
-                  one_xmlrpc:      http://localhost:2633/RPC2
-                  oneflow_server:  http://localhost:2474
-                  host: 127.0.0.1
-                  port: 1337
-                  capacity:
-                    max:
-                      cpu_mult: 2
-                      memory_mult: 2
-                    default:
-                      vcpu: 2
-                      memory: 1024
-                  log:
-                    level: 1
-                    system: 'file'
+                  $ref: '#/components/schemas/Config'
