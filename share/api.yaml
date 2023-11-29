@@ -113,8 +113,8 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
-          description: Serverless Runtime information retrieved
+        '201':
+          description: Serverless Runtime updated
           content:
             application/json:
               schema:
@@ -124,20 +124,20 @@ paths:
                   NAME: Function and Data as a Service
                   ID: 851
                   FAAS:
-                    CPU: 2
-                    MEMORY: 133
-                    DISK_SIZE: 1025
+                    CPU: 3
+                    MEMORY: 134
+                    DISK_SIZE: 1026
                     FLAVOUR: Function
                     VM_ID: 592
-                    STATE: RUNNING
+                    STATE: UPDATING
                     ENDPOINT: ''
                   DAAS:
-                    CPU: 3
-                    MEMORY: 197
-                    DISK_SIZE: 1337
+                    CPU: 4
+                    MEMORY: 198
+                    DISK_SIZE: 1338
                     FLAVOUR: Data
                     VM_ID: 593
-                    STATE: RUNNING
+                    STATE: UPDATING
                     ENDPOINT: ''
                   SCHEDULING: {}
                   DEVICE_INFO: {}
@@ -168,8 +168,16 @@ paths:
             schema:
               $ref: '#/components/schemas/ServerlessRuntime'
       responses:
-        '501':
-          description: Serverless Runtime update not implemented
+        '200':
+          description: Serverless Runtime deleted
+        '401':
+          description: Missing authentication
+        '403':
+          description: Permission Denied
+        '404':
+          description: Serverless Runtime not found
+        '500':
+          description: Failed to update Serverless Runtime
     delete:
       summary: Delete a Serverless Runtime
       description: Upon success it will trigger a deletion request of the associated services and Virtual Machines in OpenNebula

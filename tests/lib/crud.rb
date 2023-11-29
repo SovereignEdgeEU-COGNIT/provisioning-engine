@@ -21,20 +21,17 @@ RSpec.shared_context 'crud' do |sr_template|
         expect(response.code).to eq(200)
 
         runtime = JSON.parse(response.body)
-
         verify_sr_spec(@conf[:specification], runtime)
     end
 
     it "fail to update #{SR}" do
-        # skip "#{SR} creation failed" unless @conf[:create]
+        skip "#{SR} creation failed" unless @conf[:create]
+
         response = @conf[:client][:engine].update(@conf[:id], {})
+        expect(response.code).to eq(200)
 
-        expect(response.code).to eq(501)
-
-        body = JSON.parse(response.body)
-
-        verify_error(body)
-        expect(body['error']).to eq('Serverless Runtime update not implemented')
+        runtime = JSON.parse(response.body)
+        verify_sr_spec(@conf[:specification], runtime)
     end
 
     it "delete a #{SR}" do

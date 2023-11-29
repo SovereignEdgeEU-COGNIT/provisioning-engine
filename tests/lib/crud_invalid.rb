@@ -60,8 +60,7 @@ RSpec.shared_context 'crud_invalid' do
     it "fail to update a non existing #{SR}" do
         response = @conf[:client][:engine].update(@conf[:invalid][:sky], {})
 
-        expect(response.code).to eq(501)
-        # expect(response.code).to eq(404)
+        expect(response.code).to eq(404)
         verify_error(response.body)
     end
 
