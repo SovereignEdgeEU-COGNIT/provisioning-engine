@@ -24,22 +24,22 @@ install() {
 		[ -f "$EXEC_PATH" ] || sudo cp "$src_exec" "$EXEC_PATH"
 
 		# libraries
-		for file in $modules_rb; do
-			[ -f "$INSTALL_DIR/${file}" ] || cp "$(realpath "src/server/${file}.rb")" "${INSTALL_DIR}"
+		for file in $MODULES; do
+			[ -f "$INSTALL_DIR/${file}" ] || cp "$(realpath "src/server/${file}")" "${INSTALL_DIR}"
 		done
 	elif [[ $setup_mode == "symlink" ]]; then
 		# config
 		[ -L "$CONF_PATH" ] || [ -f "$CONF_PATH" ] || sudo ln -s "$src_conf" "$CONF_PATH"
 		for file in $SCHEMAS; do
-			[ -L "$CONF_DIR/${file}" ] || sudo ln -s "$(realpath "share/schemas/${file}")" "$SCHEMAS_DIR"
+			[ -L "$SCHEMAS_DIR/${file}" ] || sudo ln -s "$(realpath "share/schemas/${file}")" "$SCHEMAS_DIR"
 		done
 
 		# executable
 		[ -L "$EXEC_PATH" ] || sudo ln -s "$src_exec" "$EXEC_PATH"
 
 		# libraries
-		for file in $modules_rb; do
-			[ -L "$INSTALL_DIR/${file}" ] || ln -s "$(realpath "src/server/${file}.rb")" "${INSTALL_DIR}"
+		for file in $MODULES; do
+			[ -L "$INSTALL_DIR/${file}" ] || ln -s "$(realpath "src/server/${file}")" "${INSTALL_DIR}"
 		done
 	fi
 }
@@ -77,14 +77,15 @@ remove_orphan_gem() {
 CONF_DIR="/etc/provision-engine"
 CONF_FILE="engine.conf"
 CONF_PATH="${CONF_DIR}/${CONF_FILE}"
+
 SCHEMAS_DIR="/etc/provision-engine/schemas"
-SCHEMAS="serverless_runtime.json error.json"
+SCHEMAS="serverless_runtime.json error.json config.json"
 
 EXEC_FILE="provision-engine-server"
 EXEC_PATH="/usr/local/bin/${EXEC_FILE}"
 
 INSTALL_DIR="/opt/provision-engine"
-modules_rb="client configuration log server runtime error function"
+MODULES="client.rb configuration.rb log.rb server.rb runtime.rb error.rb function.rb"
 
 gems=("opennebula" "sinatra" "logger" "json-schema") # check requires on server.rb
 

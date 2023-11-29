@@ -5,6 +5,9 @@ module ProvisionEngine
     #
     class Configuration < Hash
 
+        PATH = '/etc/provision-engine/engine.conf'
+        SCHEMA = JSON.load_file('/etc/provision-engine/schemas/config.json').freeze
+
         DEFAULTS = {
             :one_xmlrpc => 'http://localhost:2633/RPC2',
             :oneflow_server => 'http://localhost:2474',
@@ -21,7 +24,8 @@ module ProvisionEngine
                 },
                 :memory => {
                     :default => 1024,
-                    :mult => 2
+                    :mult => 2,
+                    :resize_mode => 'BALLOONING'
                 }
             },
             :log => {
@@ -30,16 +34,16 @@ module ProvisionEngine
             }
         }
 
-        PATH = '/etc/provision-engine/engine.conf'
-
-        # TODO: Validate config values type on load
         def initialize
             replace(DEFAULTS)
 
             begin
                 merge!(YAML.load_file(PATH))
+                JSON::Validator.validate!(SCHEMA, self)
             rescue StandardError => e
-                STDERR.puts e
+                raise "Failed to load configuration at #{PATH}\n#{e}"
+            rescue JSON::Schema::ValidationError => e
+                raise "Invalid configuration at #{PATH}\n#{e}"
             end
 
             super
