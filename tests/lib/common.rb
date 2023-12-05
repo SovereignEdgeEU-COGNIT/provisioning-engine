@@ -1,4 +1,11 @@
 SR = 'Serverless Runtime'.freeze
+SRR = 'SERVERLESS_RUNTIME'.freeze
+
+HARDWARE = {
+    'CPU' => 1,
+    'MEMORY' => 64,
+    'DISK_SIZE' => 128
+}
 
 ############################################################################
 # RSpec methods
@@ -15,8 +22,8 @@ def verify_sr_spec(specification, runtime)
         raise response[1] unless response[0] == 200
     end
 
-    specification = specification['SERVERLESS_RUNTIME']
-    runtime = runtime['SERVERLESS_RUNTIME']
+    specification = specification[SRR]
+    runtime = runtime[SRR]
 
     # optional name has been applied if given
     expect(runtime['NAME']).to eq(specification['NAME']) if specification['NAME']
@@ -36,7 +43,12 @@ def verify_sr_spec(specification, runtime)
         next unless specification[role] && !specification[role]['FLAVOUR'].empty?
 
         vm = OpenNebula::VirtualMachine.new_with_id(runtime[role]['VM_ID'], @conf[:client][:oned])
-        raise "Error getting #{SR} VM" if OpenNebula.is_error?(vm.info)
+
+        response = vm.info
+
+        if OpenNebula.is_error?(response)
+            raise "Error getting #{SR} function VM #{role} \n#{response.message}"
+        end
 
         nic = "#{t}NIC[NIC_ID=\"0\"]/"
 
@@ -146,7 +158,7 @@ def generate_faas_minimal(flavour = nil)
         pp "rolled a random flavour #{flavour}"
     end
     {
-        'SERVERLESS_RUNTIME' => {
+        SRR => {
             'NAME' => flavour,
             'FAAS' => {
                 'FLAVOUR' => flavour
@@ -155,4 +167,28 @@ def generate_faas_minimal(flavour = nil)
             'DEVICE_INFO' => {}
         }
     }
+end
+
+def increase_runtime_hardware(specification, mode = 'multiply')
+    ProvisionEngine::Function::FUNCTIONS.each do |function|
+        next unless specification[SRR][function]
+
+        case mode
+        when 'multiply'
+            HARDWARE.keys.each do |h|
+                next if specification[SRR][function][h].nil?
+
+                specification[SRR][function][h] = specification[SRR][function][h] * 2
+            end
+        when 'increase'
+            HARDWARE.each do |key, value|
+                next if specification[SRR][function][key].nil?
+
+                specification[SRR][function][key] = specification[SRR][function][key] + value
+            end
+
+        else
+            raise "Invalid #{SR} hardware update mode"
+        end
+    end
 end

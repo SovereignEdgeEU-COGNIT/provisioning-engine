@@ -5,8 +5,14 @@ module ProvisionEngine
     #
     class Function < OpenNebula::VirtualMachine
 
+        STATES = {
+            :pending  => 'PENDING',
+            :running  => 'RUNNING',
+            :error    => 'ERROR',
+            :updating => 'UPDATING'
+        }.freeze
         STATE_MAP = {
-            'PENDING' => [
+            STATES[:pending] => [
                 'LCM_INIT',
                 'BOOT',
                 'PROLOG',
@@ -18,8 +24,8 @@ module ProvisionEngine
                 'PROLOG_UNDEPLOY',
                 'CLEANUP_RESUBMIT'
             ],
-            'RUNNING' => ['RUNNING'],
-            'ERROR' => [
+            STATES[:running] => ['RUNNING'],
+            STATES[:error] => [
                 'FAILURE',
                 'UNKNOWN',
                 'BOOT_FAILURE',
@@ -36,10 +42,10 @@ module ProvisionEngine
                 'PROLOG_MIGRATE_UNKNOWN_FAILURE'
             ]
         }.freeze
-        FUNCTIONS = ['FAAS', 'DAAS']
+        FUNCTIONS = ['FAAS', 'DAAS'].freeze
 
-        T = '//TEMPLATE/'
-        SRF = 'Serverless Runtime Function VM'
+        T = '//TEMPLATE/'.freeze
+        SRF = 'Serverless Runtime Function VM'.freeze
 
         def id
             @pe_id.to_i
@@ -179,7 +185,7 @@ module ProvisionEngine
             function = {}
 
             function['VM_ID'] = @pe_id
-            function['STATE'] = map_state
+            function['STATE'] = state_function
 
             if function['STATE'] == 'ERROR'
                 if error
@@ -204,7 +210,7 @@ module ProvisionEngine
         #
         # @return [Array] [Response Code, ''/Error]
         #
-        def resize_capacity?(specification)
+        def resize_capacity?(specification, logger)
             capacity_template = []
 
             if specification['MEMORY'] != memory[:memory]
@@ -220,6 +226,11 @@ module ProvisionEngine
             end
 
             return [200, ''] if capacity_template.empty?
+
+            capacity_template = capacity_template.join("\n")
+
+            logger.info("Updating #{SRF} #{@id} capacity")
+            logger.debug(capacity_template)
 
             response = resize(capacity_template, true)
 
@@ -239,10 +250,13 @@ module ProvisionEngine
         #
         # @return [Array] [Response Code, ''/Error]
         #
-        def resize_disk?(specification)
+        def resize_disk?(specification, logger)
             return [200, ''] unless specification['DISK_SIZE'] != size
 
-            response = disk_resize(0, new_size)
+            logger.info("Resizing #{SRF} #{@id} disk")
+            logger.debug("From: #{size} To: #{specification['DISK_SIZE']}")
+
+            response = disk_resize(0, specification['DISK_SIZE'])
 
             if OpenNebula.is_error?(response)
                 rc = ProvisionEngine::Error.map_error_oned(response.errno)
@@ -253,24 +267,33 @@ module ProvisionEngine
             [200, '']
         end
 
+        def pending?
+            state_function == STATES[:pending]
+        end
+
+        def running?
+            state_function == STATES[:running]
+        end
+
+        def error?
+            state_function == STATES[:error]
+        end
+
+        def updating?
+            state_function == STATES[:updating]
+        end
+
         #
         # Maps an OpenNebula VM state to the accepted Function VM states
         #
         # @return [String] Serverless Runtime Function state
         #
-        def map_state
-            case state_str
-            when 'INIT', 'PENDING', 'HOLD'
-                STATE_MAP.keys[0]
-            when 'ACTIVE'
-                STATE_MAP.each do |function_state, lcm_states|
-                    return function_state if lcm_states.include?(lcm_state_str)
-                end
-            when 'STOPPED', 'SUSPENDED', 'POWEROFF', 'UNDEPLOYED', 'CLONING'
-                STATE_MAP.keys[2]
-            else
-                STATE_MAP.keys[3]
+        def state_function
+            STATE_MAP.each do |function_state, lcm_states|
+                return function_state if lcm_states.include?(lcm_state_str)
             end
+
+            return STATES[:updating]
         end
 
     end

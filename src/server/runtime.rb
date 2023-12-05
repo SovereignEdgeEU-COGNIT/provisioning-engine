@@ -9,7 +9,9 @@ module ProvisionEngine
         SCHEMA = JSON.load_file('/etc/provision-engine/schemas/serverless_runtime.json').freeze
 
         SR = 'Serverless Runtime'.freeze
+        SRR = 'SERVERLESS_RUNTIME'.freeze
         SRD = "#{SR} Document".freeze
+        SRF = 'Serverless Runtime Function VM'.freeze
         SRS = "#{SR} Service".freeze
         SRS_NOT_FOUND = "#{SRS} not found".freeze
         SRS_NO_READ = "Failed to read #{SRS}".freeze
@@ -29,7 +31,7 @@ module ProvisionEngine
             response = ServerlessRuntime.validate(specification)
             return response unless response[0] == 200
 
-            specification = specification['SERVERLESS_RUNTIME']
+            specification = specification[SRR]
 
             response = ServerlessRuntime.to_service(client, specification)
             return response unless response[0] == 200
@@ -98,20 +100,34 @@ module ProvisionEngine
                 return ProvisionEngine::Error.new(rc, error, message)
             end
 
-            response = ServerlessRuntime.sync(client, document.body)
+            document.cclient = client
+            document.update
+        end
+
+        #
+        # Syncronizes the Serverless Runtime backing components with the document
+        #
+        # @return [Array] [Response Code, ServerlessRuntime/error]
+        #
+        def update
+            cclient?
+            initial_state = to_hash
+
+            response = ProvisionEngine::ServerlessRuntime.sync(@cclient, @body)
             return response unless response[0] == 200
 
-            response = document.update
+            return [200, self] if to_hash == initial_state
+
+            @cclient.logger.info("Updating #{SRD} #{@id}")
+            response = super()
 
             if OpenNebula.is_error?(response)
                 rc = ProvisionEngine::Error.map_error_oned(response.errno)
-                error = "Failed to update #{SR}"
+                error = "Failed to update #{SR} #{@id}"
                 return ProvisionEngine::Error.new(rc, error, response.error)
             end
 
-            document.cclient = client
-
-            [200, document]
+            [200, self]
         end
 
         #
@@ -127,45 +143,83 @@ module ProvisionEngine
             response = ServerlessRuntime.validate(specification)
             return response unless response[0] == 200
 
-            specification = specification['SERVERLESS_RUNTIME']
-
             rename?(specification)
+            specification = specification[SRR]
 
             ProvisionEngine::Function::FUNCTIONS.each do |function|
+                next if specification[function].nil?
+
                 vm_id = specification[function]['VM_ID']
+                next if vm_id.nil?
 
-                response = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)
-                rc = response[0]
+                vm = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)
+                response = vm.info
 
-                if rc != 200
+                if OpenNebula.is_error?(response)
+                    rc = ProvisionEngine::Error.map_error_oned(response.errno)
                     error = "Failed to read #{SRF} #{function}"
-                    return ProvisionEngine::Error.new(rc, error, response[1])
+                    return ProvisionEngine::Error.new(rc, error, response.message)
                 end
 
-                vm = response[1]
+                # Resize VM hardware
+                case vm.state_function
+                when ProvisionEngine::Function::STATES[:updating], ProvisionEngine::Function::STATES[:pending]
+                    rc = 423
+                    error = "Cannot update #{SRF} #{function} on a transient state"
+                    return ProvisionEngine::Error.new(rc, error, vm.state_function)
+                when ProvisionEngine::Function::STATES[:error]
+                    vm.recover(2) # retry
+                    error = "Cannot update #{SRF} #{function} on an error state. A recovery was attempted"
+                    return ProvisionEngine::Error.new(500, error,
+                                                      ProvisionEngine::Function::STATES[:error])
+                when ProvisionEngine::Function::STATES[:running]
+                    ['capacity', 'disk'].each do |resource|
+                        response = vm.public_send("resize_#{resource}?", specification[function],
+                                                  @cclient.logger)
+                        return response unless response[0] == 200
 
-                ['capactiy', 'disk'].each do |resource|
-                    @cclient.logger.info("Updating #{SRF} #{function} #{resource}")
+                        1.upto(@cclient.conf[:timeout]) do |t|
+                            vm.info
 
-                    response = vm.public_send("resize_#{resource}?", specification[function])
-                    return response unless response[0] == 200
+                            if t == @cclient.conf[:timeout]
+                                rc = 504
+                                error = "#{SRF} #{function} stuck while updating capabilities"
+                                return ProvisionEngine::Error.new(rc, error, vm.state_function)
+                            end
+
+                            case vm.state_function
+                            when ProvisionEngine::Function::STATES[:running]
+                                break
+                            when ProvisionEngine::Function::STATES[:updating]
+                                sleep 1
+                                next
+                            else
+                                rc = 500
+                                error = "#{SRF} #{function} entered unexpected state"
+                                return ProvisionEngine::Error.new(rc, error, vm.state_function)
+                            end
+                        end
+                    end
+
+                end
+
+                # Update document body and VMs USER_TEMPLATE
+                ['SCHEDULING', 'DEVICE_INFO'].each do |schevice|
+                    next if specification[function][schevice].nil?
+                    next if specification[function][schevice] == @body[SRR][function][schevice]
+
+                    @body[SRR][function][schevice] = specification[function][schevice]
+                    vm.update(specification[function][schevice], true)
+
+                    next unless OpenNebula.is_error?(response)
+
+                    rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                    error = "Failed to update #{SRF} #{schevice}"
+                    return ProvisionEngine::Error.new(rc, error, response.message)
                 end
             end
 
-            @cclient.logger.info("Updating #{SRD} #{@id}")
-
-            response = ProvisionEngine::ServerlessRuntime.sync(@cclient, @body)
-            return response unless response[0] == 200
-
-            response = update
-
-            if OpenNebula.is_error?(response)
-                rc = ProvisionEngine::Error.map_error_oned(response.errno)
-                error = "Failed to update #{SR}"
-                return ProvisionEngine::Error.new(rc, error, response.error)
-            end
-
-            [200, self]
+            update
         end
 
         #
@@ -430,11 +484,9 @@ module ProvisionEngine
         #
         # Perform recovery operations on the Serverless Runtime backing components
         #
-        # @param [Int] service_id flow service backing the Serverless Runtime
-        #
         # @return [Array] [Response Code, Service Document Body/Error]
         #
-        def recover(service_id)
+        def recover
             response = @cclient.service_recover(service_id)
             rc = response[0]
 
@@ -471,11 +523,12 @@ module ProvisionEngine
         # @return [Array] [Response Code, ''/Error]
         #
         def rename?(specification)
-            new_name = specification['NAME']
+            new_name = specification[SRR]['NAME']
 
             return [200, ''] unless new_name && new_name != name
 
             @cclient.logger.info("Renaming #{SRD} #{@id}")
+            @cclient.logger.debug("From: #{name} To: #{new_name}")
 
             response = rename(new_name)
 
@@ -524,17 +577,22 @@ module ProvisionEngine
             load?
 
             runtime = {
-                :SERVERLESS_RUNTIME => {
+                SRR => {
                     :NAME => name,
                     :ID => id
                 }
             }
-            rsr = runtime[:SERVERLESS_RUNTIME]
+            rsr = runtime[SRR]
 
             rsr.merge!(@body)
             rsr.delete('registration_time')
 
             runtime
+        end
+
+        def service_id
+            load?
+            @body[SRR]['SERVICE_ID']
         end
 
         #

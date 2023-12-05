@@ -10,7 +10,7 @@ RSpec.shared_context 'crud' do |sr_template|
 
         runtime = JSON.parse(response.body)
 
-        @conf[:id] = runtime['SERVERLESS_RUNTIME']['ID'].to_i
+        @conf[:id] = runtime[SRR]['ID'].to_i
         @conf[:create] = true
     end
 
@@ -22,16 +22,50 @@ RSpec.shared_context 'crud' do |sr_template|
 
         runtime = JSON.parse(response.body)
         verify_sr_spec(@conf[:specification], runtime)
+
+        @conf[:runtime] = runtime
     end
 
-    it "fail to update #{SR}" do
+    # VM reaches RUNNING state eventually
+    # only updates the specified functions
+    # only updates what is different from the existing function
+    # missing properties will be ignored
+    #   for the time being only:
+    #      updates CPU, MEMORY and DISK
+    #      rename document
+    # runtime ID, service ID and Function IDs remain the same
+    it "update #{SR}" do
         skip "#{SR} creation failed" unless @conf[:create]
 
-        response = @conf[:client][:engine].update(@conf[:id], {})
-        expect(response.code).to eq(200)
+        increase_runtime_hardware(@conf[:runtime], 'increase')
 
-        runtime = JSON.parse(response.body)
-        verify_sr_spec(@conf[:specification], runtime)
+        timeout = @conf[:conf][:tests][:timeouts][:get]
+        1.upto(timeout) do |t|
+            if t == timeout
+                raise "Timeut reached for #{SR} deployment"
+            end
+
+            response = @conf[:client][:engine].update(@conf[:id], @conf[:runtime])
+            rc = response.code
+            body = JSON.parse(response.body)
+
+            case rc
+            when 200
+                verify_sr_spec(@conf[:runtime], body)
+                break
+            when 423
+                pp "Waiting for #{SR} to be RUNNING"
+                verify_error(body)
+
+                sleep 1
+                next
+            else
+                pp body
+                verify_error(body)
+
+                raise "Unexpected error code #{rc}"
+            end
+        end
     end
 
     it "delete a #{SR}" do

@@ -68,11 +68,11 @@ RSpec.describe 'Provision Engine API' do
 
             include_context('crud', sr_template)
         end
+
+        tests.delete('crud')
     end
 
     tests.each do |examples, enabled|
-        next if examples == 'crud'
-
         if enabled
             require examples
             include_context(examples)
