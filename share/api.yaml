@@ -10,6 +10,8 @@ components:
       $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/serverless_runtime.json'
     Error:
       $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/error.json'
+    Config:
+      $ref: 'https://raw.githubusercontent.com/SovereignEdgeEU-COGNIT/provisioning-engine/main/share/schemas/config.json'
   securitySchemes:
     basicAuth:
       type: http
@@ -111,8 +113,8 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
-          description: Serverless Runtime information retrieved
+        '201':
+          description: Serverless Runtime updated
           content:
             application/json:
               schema:
@@ -122,20 +124,20 @@ paths:
                   NAME: Function and Data as a Service
                   ID: 851
                   FAAS:
-                    CPU: 2
-                    MEMORY: 133
-                    DISK_SIZE: 1025
+                    CPU: 3
+                    MEMORY: 134
+                    DISK_SIZE: 1026
                     FLAVOUR: Function
                     VM_ID: 592
-                    STATE: RUNNING
+                    STATE: UPDATING
                     ENDPOINT: ''
                   DAAS:
-                    CPU: 3
-                    MEMORY: 197
-                    DISK_SIZE: 1337
+                    CPU: 4
+                    MEMORY: 198
+                    DISK_SIZE: 1338
                     FLAVOUR: Data
                     VM_ID: 593
-                    STATE: RUNNING
+                    STATE: UPDATING
                     ENDPOINT: ''
                   SCHEDULING: {}
                   DEVICE_INFO: {}
@@ -166,8 +168,16 @@ paths:
             schema:
               $ref: '#/components/schemas/ServerlessRuntime'
       responses:
-        '501':
-          description: Serverless Runtime update not implemented
+        '200':
+          description: Serverless Runtime deleted
+        '401':
+          description: Missing authentication
+        '403':
+          description: Permission Denied
+        '404':
+          description: Serverless Runtime not found
+        '500':
+          description: Failed to update Serverless Runtime
     delete:
       summary: Delete a Serverless Runtime
       description: Upon success it will trigger a deletion request of the associated services and Virtual Machines in OpenNebula
@@ -220,18 +230,4 @@ paths:
               application/json:
                 schema:
                   type: object
-                example:
-                  one_xmlrpc:      http://localhost:2633/RPC2
-                  oneflow_server:  http://localhost:2474
-                  host: 127.0.0.1
-                  port: 1337
-                  capacity:
-                    max:
-                      vcpu_mult: 2
-                      memory_mult: 2
-                    default:
-                      vcpu: 2
-                      memory: 1024
-                  log:
-                    level: 1
-                    system: 'file'
+                  $ref: '#/components/schemas/Config'

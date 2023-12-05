@@ -9,52 +9,29 @@ module ProvisionEngine
         SCHEMA = JSON.load_file('/etc/provision-engine/schemas/serverless_runtime.json').freeze
 
         SR = 'Serverless Runtime'.freeze
+        SRR = 'SERVERLESS_RUNTIME'.freeze
         SRD = "#{SR} Document".freeze
+        SRF = 'Serverless Runtime Function VM'.freeze
         SRS = "#{SR} Service".freeze
         SRS_NOT_FOUND = "#{SRS} not found".freeze
         SRS_NO_READ = "Failed to read #{SRS}".freeze
-        SERVICE_NO_DELETE = 'Failed to delete service'.freeze
-
-        FUNCTION_STATES = ['PENDING', 'RUNNING', 'UPDATING', 'ERROR'].freeze
-        FUNCTION_LCM_STATES = {
-            FUNCTION_STATES[0] => [
-                'LCM_INIT',
-                'BOOT',
-                'PROLOG',
-                'BOOT_UNKNOWN',
-                'BOOT_POWEROFF',
-                'BOOT_SUSPENDED',
-                'BOOT_STOPPED',
-                'BOOT_UNDEPLOY',
-                'PROLOG_UNDEPLOY',
-                'CLEANUP_RESUBMIT'
-            ],
-            FUNCTION_STATES[1] => ['RUNNING'],
-            FUNCTION_STATES[3] => [
-                'FAILURE',
-                'UNKNOWN',
-                'BOOT_FAILURE',
-                'BOOT_MIGRATE_FAILURE',
-                'BOOT_UNDEPLOY_FAILURE',
-                'BOOT_STOPPED_FAILURE',
-                'PROLOG_FAILURE',
-                'PROLOG_MIGRATE_FAILURE',
-                'PROLOG_MIGRATE_POWEROFF_FAILURE',
-                'PROLOG_MIGRATE_SUSPEND_FAILURE',
-                'PROLOG_RESUME_FAILURE',
-                'PROLOG_UNDEPLOY_FAILURE',
-                'PROLOG_MIGRATE_UNKNOWN',
-                'PROLOG_MIGRATE_UNKNOWN_FAILURE'
-            ]
-        }.freeze
+        SRS_NO_DELETE = "Failed to delete #{SRS}".freeze
 
         attr_accessor :cclient, :body
 
+        #
+        # Creates Serverless Runtime Document and its backing service
+        #
+        # @param [CloudClient] client OpenNebula interface
+        # @param [Hash] specification Serverless Runtime definition
+        #
+        # @return [Array] [Response Code, Serverless Runtime Document/Error]
+        #
         def self.create(client, specification)
             response = ServerlessRuntime.validate(specification)
             return response unless response[0] == 200
 
-            specification = specification['SERVERLESS_RUNTIME']
+            specification = specification[SRR]
 
             response = ServerlessRuntime.to_service(client, specification)
             return response unless response[0] == 200
@@ -64,7 +41,7 @@ module ProvisionEngine
 
             client.logger.info("#{SRS} #{service_id} created")
 
-            response = ServerlessRuntime.sync(client, specification, service_id)
+            response = ServerlessRuntime.sync(client, specification)
             return response unless response[0] == 200
 
             client.logger.info("Creating #{SRD}")
@@ -82,7 +59,7 @@ module ProvisionEngine
                 response = client.service_destroy(service_id)
 
                 if response[0] != 204
-                    message << "#{SERVICE_NO_DELETE} #{service_id}"
+                    message << "#{SRS_NO_DELETE} #{service_id}"
                     message << response[1]
                 end
 
@@ -96,6 +73,14 @@ module ProvisionEngine
             [201, runtime]
         end
 
+        #
+        # Loads an existing Serverless Runtime
+        #
+        # @param [CloudClient] client OpenNebula interface
+        # @param [Int] id Serverless Runtime Document ID
+        #
+        # @return [Array] [Response Code, Serverless Runtime Document/Error]
+        #
         def self.get(client, id)
             document = ServerlessRuntime.new_with_id(id, client.client_oned)
             response = document.info
@@ -115,22 +100,135 @@ module ProvisionEngine
                 return ProvisionEngine::Error.new(rc, error, message)
             end
 
-            runtime = document
-            body = runtime.body
-
-            response = ServerlessRuntime.sync(client, body, body['SERVICE_ID'])
-            return response if response[0] != 200
-
-            runtime.update
-            runtime.cclient = client
-
-            [200, runtime]
+            document.cclient = client
+            document.update
         end
 
-        def delete
-            raise "Missing #{SR} Cloud Client" unless @cclient
+        #
+        # Syncronizes the Serverless Runtime backing components with the document
+        #
+        # @return [Array] [Response Code, ServerlessRuntime/error]
+        #
+        def update
+            cclient?
+            initial_state = to_hash
 
-            @cclient.logger.info("Deleting #{SRS}")
+            response = ProvisionEngine::ServerlessRuntime.sync(@cclient, @body)
+            return response unless response[0] == 200
+
+            return [200, self] if to_hash == initial_state
+
+            @cclient.logger.info("Updating #{SRD} #{@id}")
+            response = super()
+
+            if OpenNebula.is_error?(response)
+                rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                error = "Failed to update #{SR} #{@id}"
+                return ProvisionEngine::Error.new(rc, error, response.error)
+            end
+
+            [200, self]
+        end
+
+        #
+        # Updates the Serverless Runtime document and its backing components
+        #
+        # @param [Hash] specification Desired Serverless Runtime state
+        #
+        # @return [Array] [Response Code, Serverless Runtime Document/Error]
+        #
+        def update_sr(specification)
+            cclient?
+
+            response = ServerlessRuntime.validate(specification)
+            return response unless response[0] == 200
+
+            rename?(specification)
+            specification = specification[SRR]
+
+            ProvisionEngine::Function::FUNCTIONS.each do |function|
+                next if specification[function].nil?
+
+                vm_id = specification[function]['VM_ID']
+                next if vm_id.nil?
+
+                vm = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)
+                response = vm.info
+
+                if OpenNebula.is_error?(response)
+                    rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                    error = "Failed to read #{SRF} #{function}"
+                    return ProvisionEngine::Error.new(rc, error, response.message)
+                end
+
+                # Resize VM hardware
+                case vm.state_function
+                when ProvisionEngine::Function::STATES[:updating], ProvisionEngine::Function::STATES[:pending]
+                    rc = 423
+                    error = "Cannot update #{SRF} #{function} on a transient state"
+                    return ProvisionEngine::Error.new(rc, error, vm.state_function)
+                when ProvisionEngine::Function::STATES[:error]
+                    vm.recover(2) # retry
+                    error = "Cannot update #{SRF} #{function} on an error state. A recovery was attempted"
+                    return ProvisionEngine::Error.new(500, error,
+                                                      ProvisionEngine::Function::STATES[:error])
+                when ProvisionEngine::Function::STATES[:running]
+                    ['capacity', 'disk'].each do |resource|
+                        response = vm.public_send("resize_#{resource}?", specification[function],
+                                                  @cclient.logger)
+                        return response unless response[0] == 200
+
+                        1.upto(@cclient.conf[:timeout]) do |t|
+                            vm.info
+
+                            if t == @cclient.conf[:timeout]
+                                rc = 504
+                                error = "#{SRF} #{function} stuck while updating capabilities"
+                                return ProvisionEngine::Error.new(rc, error, vm.state_function)
+                            end
+
+                            case vm.state_function
+                            when ProvisionEngine::Function::STATES[:running]
+                                break
+                            when ProvisionEngine::Function::STATES[:updating]
+                                sleep 1
+                                next
+                            else
+                                rc = 500
+                                error = "#{SRF} #{function} entered unexpected state"
+                                return ProvisionEngine::Error.new(rc, error, vm.state_function)
+                            end
+                        end
+                    end
+
+                end
+
+                # Update document body and VMs USER_TEMPLATE
+                ['SCHEDULING', 'DEVICE_INFO'].each do |schevice|
+                    next if specification[function][schevice].nil?
+                    next if specification[function][schevice] == @body[SRR][function][schevice]
+
+                    @body[SRR][function][schevice] = specification[function][schevice]
+                    vm.update(specification[function][schevice], true)
+
+                    next unless OpenNebula.is_error?(response)
+
+                    rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                    error = "Failed to update #{SRF} #{schevice}"
+                    return ProvisionEngine::Error.new(rc, error, response.message)
+                end
+            end
+
+            update
+        end
+
+        #
+        # Deletes a Serverless Runtime Document and its backing components
+        #
+        # @return [Array] [Response Code, ''/Error]
+        #
+        def delete
+            cclient? && @cclient.logger.info("Deleting #{SRS}")
 
             document = JSON.parse(to_json)
             service_id = document['DOCUMENT']['TEMPLATE']['BODY']['SERVICE_ID']
@@ -141,7 +239,7 @@ module ProvisionEngine
             @cclient.logger.warning(SRS_NOT_FOUND) if rc == 404
 
             if ![204, 404].include?(rc)
-                error = "#{SERVICE_NO_DELETE} #{service_id}"
+                error = "#{SRS_NO_DELETE} #{service_id}"
                 message = response[1]
 
                 [error, message].each {|i| @cclient.logger.error(i) }
@@ -173,7 +271,7 @@ module ProvisionEngine
         #
         # @param [Hash] specification a runtime specification
         #
-        # @return [Array] [true,''] or [false, 'reason']
+        # @return [Array] [200,''] or [400, Error]
         #
         def self.validate(specification)
             begin
@@ -184,19 +282,23 @@ module ProvisionEngine
             end
         end
 
+        #####################
+        # Service Management
+        #####################
+
         #
         # Updates Serverless Runtime definition based on the underlying elements state
         #
         # @param [CloudClient] client OpenNebula interface
-        # @param [Hash] runtime Serverless Runtime definition to be updated
-        # @param [Integer] service_id OneFlow service ID mapped to the Serverless Runtime
-        # @param [Integer] timeout How long to wait for Role VMs to be created
+        # @param [Hash] specification Serverless Runtime definition to be updated
         #
-        # TODO: timeout is hardcoded
-        def self.sync(client, runtime, service_id, timeout = 30)
+        # @return [Array] [Response Code, ''/Error]
+        #
+        def self.sync(client, specification)
+            service_id = specification['SERVICE_ID']
             service = nil
 
-            1.upto(timeout) do |t|
+            1.upto(client.conf[:timeout]) do |t|
                 catch(:query_service) do
                     if t == 30
                         error = "OpenNebula did not create VMs for the #{SRS} #{service_id}"
@@ -210,7 +312,7 @@ module ProvisionEngine
                     rb = response[1]
 
                     if rc != 200
-                        error = "Failed to read #{SRS}"
+                        error = "#{SRS_NO_READ} #{service_id}"
                         return ProvisionEngine::Error.new(rc, error, rb)
                     end
 
@@ -230,7 +332,14 @@ module ProvisionEngine
                     client.logger.debug(service)
 
                     roles.each do |role|
-                        runtime[role['name']].merge!(xaas_template(client, role))
+                        id = role['nodes'][0]['vm_info']['VM']['ID'].to_i
+
+                        response = ProvisionEngine::Function.get(client.client_oned, id)
+                        return response unless response[0] == 200
+
+                        vm = response[1]
+
+                        specification[role['name']].merge!(vm.to_function)
                     end
 
                     return [200, '']
@@ -238,17 +347,13 @@ module ProvisionEngine
             end
         end
 
-        #####################
-        # Service Management
-        #####################
-
         #
         # Create oneflow service based on Serverless Runtime specification
         #
         # @param [CloudClient] OpenNebula interface
         # @param [Hash] specification Serverless Runtime specification
         #
-        # @return [Array] Response Code and Body of the operation
+        # @return [Array] [Response Code, Service Document Body/'Error']
         #
         def self.to_service(client, specification)
             response = client.service_template_pool_get
@@ -293,7 +398,7 @@ module ProvisionEngine
                     schevice << "#{i}=[#{i_template}]\n"
                 end
 
-                ['FAAS', 'DAAS'].each do |role|
+                ProvisionEngine::Function::FUNCTIONS.each do |role|
                     next unless specification[role] && !specification[role]['FLAVOUR'].empty?
 
                     service_template['TEMPLATE']['BODY']['roles'].each do |service_template_role|
@@ -309,10 +414,17 @@ module ProvisionEngine
                             return ProvisionEngine::Error.new(rc, error, rb)
                         end
 
-                        override = function_requierements(specification[role], rb,
-                                                          client.conf[:capacity])
+                        vm_template = rb
 
-                        client.logger.info("Applying vm_template_contents to role #{role}")
+                        if !vm_template.template_like_str('//TEMPLATE/DISK')
+                            error = 'Function VM template does not have associated DISK'
+                            return ProvisionEngine::Error.new(500, error)
+                        end
+
+                        override = ProvisionEngine::Function.vm_template_contents(specification[role], vm_template,
+                                                                                  client.conf[:capacity])
+
+                        client.logger.info("Applying \"vm_template_contents\" to role #{role}")
                         client.logger.debug(override)
 
                         merge_template['roles'] << {
@@ -352,7 +464,7 @@ module ProvisionEngine
 
                     response = client.service_destroy(service_id)
                     if response[0] != 204
-                        message << "#{SERVICE_NO_DELETE} #{service_id}"
+                        message << "#{SRS_NO_DELETE} #{service_id}"
                         message << response[1]
                     end
 
@@ -369,7 +481,12 @@ module ProvisionEngine
             ProvisionEngine::Error.new(422, error, message)
         end
 
-        def recover(service_id)
+        #
+        # Perform recovery operations on the Serverless Runtime backing components
+        #
+        # @return [Array] [Response Code, Service Document Body/Error]
+        #
+        def recover
             response = @cclient.service_recover(service_id)
             rc = response[0]
 
@@ -382,7 +499,7 @@ module ProvisionEngine
             rc = response[0]
 
             if rc != 200
-                error = SRS_NO_READ
+                error = "#{SRS_NO_READ} #{service_id}"
                 return ProvisionEngine::Error.new(rc, error, response[1])
             end
 
@@ -399,135 +516,35 @@ module ProvisionEngine
         end
 
         #
-        # Generates oneflow service vm_template_contents for a given role
-        # based on a Serverless Runtime Function specification
+        # Renames the Serverless Runtime Document if the specification demands it
         #
-        # @param [Hash] specification Function specification found in Serverless Runtime definition
-        # @param [OpenNebula::Template] vm_template Function baseline VM template
-        # @param [Hash] conf_capacity Engine configuration attribute for max capacity assumptions
+        # @param [Hash] specification Serverless Runtime specification with desired state
         #
-        # @return [String] vm_template contents for a oneflow service template
+        # @return [Array] [Response Code, ''/Error]
         #
-        def self.function_requierements(role_specification, vm_template, conf_capacity)
-            disk_size = role_specification['DISK_SIZE']
-            xaas = []
+        def rename?(specification)
+            new_name = specification[SRR]['NAME']
 
-            xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=\"YES\",\nMEMORY_HOT_ADD_ENABLED=\"YES\"]"
-            xaas << 'MEMORY_RESIZE_MODE="BALLOONING"'
+            return [200, ''] unless new_name && new_name != name
 
-            if disk_size
-                disk_template = vm_template.template_like_str('//TEMPLATE/DISK')
+            @cclient.logger.info("Renaming #{SRD} #{@id}")
+            @cclient.logger.debug("From: #{name} To: #{new_name}")
 
-                if disk_template.include?('SIZE=')
-                    disk_template.sub!("SIZE=\d+", "SIZE=\"#{disk_size}\"")
-                else
-                    disk_template << "\n#{"SIZE=\"#{disk_size}\""}"
-                end
+            response = rename(new_name)
 
-                disk_template.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
-                xaas << "DISK=[#{disk_template}]"
+            if OpenNebula.is_error?(response)
+                rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                error = "Failed to rename #{SR}"
+
+                return ProvisionEngine::Error.new(rc, error, response.error)
             end
 
-            if role_specification['CPU']
-                xaas << "CPU=#{role_specification['CPU']}"
-                xaas << "VCPU=#{role_specification['CPU']}"
+            return [200, ''] unless name != new_name
 
-                vcpu_max = role_specification['CPU'] * conf_capacity[:max][:vcpu_mult]
-            else # get upper limit from mult * vm_template_vcpu
-                vcpu = vm_template['//TEMPLATE/VCPU'].to_i
-                vcpu = conf_capacity[:default][:vcpu] if vcpu.zero?
+            error = "Failed to rename #{SR}"
+            message = "#{SRD} name \"#{name}\" mismatches target name #{new_name} after succesful rename operation"
 
-                vcpu_max = vcpu * conf_capacity[:max][:vcpu_mult]
-            end
-            if role_specification['MEMORY']
-                xaas << "MEMORY=#{role_specification['MEMORY']}"
-
-                memory_max = role_specification['MEMORY'] * conf_capacity[:max][:memory_mult]
-            else # get upper limit from mult * vm_template_memory
-                memory = vm_template['//TEMPLATE/MEMORY'].to_i
-                memory = conf_capacity[:default][:memory] if memory.zero?
-
-                memory_max = memory * conf_capacity[:max][:memory_mult]
-            end
-
-            xaas << "VCPU_MAX= \"#{vcpu_max}\""
-            xaas << "MEMORY_MAX=\"#{memory_max}\""
-
-            xaas.join("\n")
-        end
-
-        #
-        # Creates a runtime function hash for the Serverless Runtime document
-        #
-        # @param [CloudClient] OpenNebula interface
-        # @param [Hash] role oneflow service role information
-        #
-        # @return [Hash] Function hash
-        #
-        def self.xaas_template(client, role)
-            vm_info = role['nodes'][0]['vm_info']['VM']
-            vm_id = vm_info['ID'].to_i
-
-            response = client.vm_get(vm_id)
-            rc = response[0]
-            rb = response[1]
-
-            return response unless rc == 200
-
-            vm = rb
-            xaas_template = {}
-            t = '//TEMPLATE/'
-            nic = "#{t}NIC[NIC_ID=\"0\"]/"
-
-            xaas_template['VM_ID'] = vm_id
-            xaas_template['STATE'] = map_vm_state(vm)
-
-            if xaas_template['STATE'] == 'ERROR'
-                if vm["#{t}ERROR"]
-                    xaas_template['ERROR'] = vm["#{t}ERROR"]
-                else
-                    xaas_template['ERROR'] = 'No VM Error from Cloud Edge Manager'
-                end
-            end
-
-            if nic
-                ['EXTERNAL_IP', 'IP6', 'IP'].each do |address| # Priority order
-                    if vm["#{nic}#{address}"]
-                        xaas_template['ENDPOINT'] = vm["#{nic}#{address}"]
-                        break
-                    end
-                end
-            end
-            # No ENDPOINT will result in empty string
-            xaas_template['ENDPOINT'] = '' unless xaas_template['ENDPOINT']
-
-            xaas_template['CPU'] = vm["#{t}VCPU"].to_i
-            xaas_template['MEMORY'] = vm["#{t}MEMORY"].to_i
-            xaas_template['DISK_SIZE'] = vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i
-
-            xaas_template
-        end
-
-        #
-        # Maps an OpenNebula VM state to the accepted Function VM states
-        #
-        # @param [OpenNebula::VirtualMachine] vm Virtual Machine representing the Function
-        #
-        # @return [String] Serverless Runtime Function state
-        #
-        def self.map_vm_state(vm)
-            case vm.state_str
-            when 'INIT', 'PENDING', 'HOLD'
-                FUNCTION_STATES[0]
-            when 'ACTIVE'
-                FUNCTION_LCM_STATES.each do |function_state, vm_states|
-                    return function_state if vm_states.include?(vm.lcm_state_str)
-                end
-            when 'STOPPED', 'SUSPENDED', 'POWEROFF', 'UNDEPLOYED', 'CLONING'
-                FUNCTION_STATES[2]
-            else
-                FUNCTION_STATES[3]
-            end
+            return ProvisionEngine::Error.new(rc, error, message)
         end
 
         #####################
@@ -552,25 +569,30 @@ module ProvisionEngine
         #################
 
         #
-        # Translates the Serverless Runtime document to the SCHEMA
+        # Translates the Serverless Runtime document body a SCHEMA compatible Hash
         #
-        # @return [Hash] Serverless Runtime definition
+        # @return [Hash] Serverless Runtime representation
         #
         def to_sr
             load?
 
             runtime = {
-                :SERVERLESS_RUNTIME => {
+                SRR => {
                     :NAME => name,
                     :ID => id
                 }
             }
-            rsr = runtime[:SERVERLESS_RUNTIME]
+            rsr = runtime[SRR]
 
             rsr.merge!(@body)
             rsr.delete('registration_time')
 
             runtime
+        end
+
+        def service_id
+            load?
+            @body[SRR]['SERVICE_ID']
         end
 
         #
@@ -592,6 +614,10 @@ module ProvisionEngine
 
         def load?
             load_body if @body.nil?
+        end
+
+        def cclient?
+            raise "Missing #{SR} Cloud Client" unless @cclient
         end
 
     end

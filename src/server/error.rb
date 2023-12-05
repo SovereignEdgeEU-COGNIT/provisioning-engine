@@ -8,12 +8,12 @@ module ProvisionEngine
     # @return [Bool] whether the error matches the SCHEMA or not
     #
     def self.error?(response)
-        # begin
+        begin
             JSON::Validator.validate!(Error::SCHEMA, response)
-        #     true
-        # rescue JSON::Schema::ValidationError
-        #     false
-        # end
+            true
+        rescue JSON::Schema::ValidationError
+            false
+        end
     end
 
     #

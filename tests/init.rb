@@ -17,6 +17,7 @@ require 'opennebula/oneflow_client'
 # Engine libraries
 $LOAD_PATH << "#{__dir__}/../src/server"
 require 'runtime'
+require 'function'
 require 'error'
 require_relative '../src/client/client'
 
@@ -67,11 +68,11 @@ RSpec.describe 'Provision Engine API' do
 
             include_context('crud', sr_template)
         end
+
+        tests.delete('crud')
     end
 
     tests.each do |examples, enabled|
-        next if examples == 'crud'
-
         if enabled
             require examples
             include_context(examples)

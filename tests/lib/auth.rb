@@ -24,7 +24,7 @@ RSpec.shared_context 'auth' do
         @conf[:auth][:create] = true
 
         runtime = JSON.parse(response.body)
-        @conf[:auth][:id] = runtime['SERVERLESS_RUNTIME']['ID'].to_i
+        @conf[:auth][:id] = runtime[SRR]['ID'].to_i
     end
 
     it 'missing auth on Create' do

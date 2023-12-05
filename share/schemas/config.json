@@ -1,0 +1,71 @@
+{
+  "type": "object",
+  "properties": {
+    "one_xmlrpc": {
+      "type": "string",
+      "format": "uri"
+    },
+    "oneflow_server": {
+      "type": "string",
+      "format": "uri"
+    },
+    "host": {
+      "type": "string"
+    },
+    "port": {
+      "type": "integer"
+    },
+    "timeout": {
+      "type": "integer"
+    },
+    "capacity": {
+      "type": "object",
+      "properties": {
+        "disk": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "integer"
+            }
+          }
+        },
+        "cpu": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "integer"
+            },
+            "mult": {
+              "type": "integer"
+            }
+          }
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "integer"
+            },
+            "mult": {
+              "type": "integer"
+            },
+            "resize_mode": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "log": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "integer"
+        },
+        "system": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
