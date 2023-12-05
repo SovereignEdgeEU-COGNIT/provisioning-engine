@@ -29,7 +29,7 @@ require 'function'
 # API configuration
 ############################################################################
 
-VERSION = '0.10.1'
+VERSION = '1.0.0'
 conf = ProvisionEngine::Configuration.new
 
 configure do
