@@ -165,6 +165,14 @@ module ProvisionEngine
                     return ProvisionEngine::Error.new(rc, error, response.message)
                 end
 
+                @cclient.logger.info "Looking for changes for function #{function}"
+
+                changes = specification[function].dup.delete_if do |k, v|
+                    @body[function][k] == v
+                end
+
+                @cclient.logger.debug changes
+
                 # Resize VM hardware
                 case vm.state_function
                 when ProvisionEngine::Function::STATES[:updating], ProvisionEngine::Function::STATES[:pending]
@@ -173,9 +181,9 @@ module ProvisionEngine
                     return ProvisionEngine::Error.new(rc, error, vm.state_function)
                 when ProvisionEngine::Function::STATES[:error]
                     vm.recover(2) # retry
-                    error = "Cannot update #{SRF} #{function} on an error state. A recovery was attempted"
-                    return ProvisionEngine::Error.new(500, error,
-                                                      ProvisionEngine::Function::STATES[:error])
+
+                    err = "Cannot update #{SRF} #{function} on an error state. A recovery was attempted"
+                    return ProvisionEngine::Error.new(500, err, error)
                 when ProvisionEngine::Function::STATES[:running]
                     ['capacity', 'disk'].each do |resource|
                         response = vm.public_send("resize_#{resource}?", specification[function],
