@@ -147,10 +147,14 @@ module ProvisionEngine
             specification = specification[SRR]
 
             ProvisionEngine::Function::FUNCTIONS.each do |function|
-                next if specification[function].nil?
+                next if specification[function].nil? || specification[function]['FLAVOUR'].empty?
 
-                vm_id = specification[function]['VM_ID']
-                next if vm_id.nil?
+                vm_id = @body[function]['VM_ID']
+                if vm_id.nil?
+                    rc = 500
+                    error = "No VM_ID found for function #{function}"
+                    return ProvisionEngine::Error.new(rc, error)
+                end
 
                 vm = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)
                 response = vm.info
