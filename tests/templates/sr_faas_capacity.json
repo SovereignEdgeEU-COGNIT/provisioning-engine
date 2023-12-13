@@ -2,9 +2,9 @@
   "SERVERLESS_RUNTIME": {
     "NAME": "Function as a Service",
     "FAAS": {
-      "MEMORY": 111,
+      "MEMORY": 177,
       "CPU": 3,
-      "DISK_SIZE": 420,
+      "DISK_SIZE": 1338,
       "FLAVOUR": "Function"
     },
     "SCHEDULING": {

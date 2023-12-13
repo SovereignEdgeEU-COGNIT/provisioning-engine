@@ -23,6 +23,7 @@ RSpec.shared_context 'crud' do |sr_template|
         runtime = JSON.parse(response.body)
         verify_sr_spec(@conf[:specification], runtime)
 
+        strip_consequential_info(runtime)
         @conf[:runtime] = runtime
     end
 

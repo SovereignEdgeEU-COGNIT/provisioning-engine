@@ -192,3 +192,17 @@ def increase_runtime_hardware(specification, mode = 'multiply')
         end
     end
 end
+
+def strip_consequential_info(specification)
+    ['ID', 'SERVICE_ID'].each do |ri|
+        specification[SRR].delete(ri)
+    end
+
+    ProvisionEngine::Function::FUNCTIONS.each do |function|
+        next unless specification[SRR][function]
+
+        ['VM_ID', 'STATE'].each do |fi|
+            specification[SRR][function].delete(fi)
+        end
+    end
+end
