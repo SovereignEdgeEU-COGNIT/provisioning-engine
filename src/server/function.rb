@@ -45,6 +45,7 @@ module ProvisionEngine
         FUNCTIONS = ['FAAS', 'DAAS'].freeze
 
         T = '//TEMPLATE/'.freeze
+        NIC = "#{T}NIC[NIC_ID=\"0\"]".freeze
         SRF = 'Serverless Runtime Function VM'.freeze
 
         def id
@@ -78,10 +79,6 @@ module ProvisionEngine
             self["#{T}DISK[DISK_ID=\"0\"]/SIZE"].to_i
         end
 
-        def nic
-            self["#{T}NIC[NIC_ID=\"0\"]"]
-        end
-
         def error
             self["#{T}ERROR"]
         end
@@ -92,12 +89,10 @@ module ProvisionEngine
         # @return [String] Address
         #
         def endpoint
-            return '' unless nic
+            return '' unless self[NIC]
 
             ['EXTERNAL_IP', 'IP6', 'IP'].each do |address|
-                if self["#{nic}/#{address}"]
-                    return self["#{nic}/#{address}"]
-                end
+                return self["#{NIC}/#{address}"] if self["#{NIC}/#{address}"]
             end
 
             return ''
