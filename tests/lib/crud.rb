@@ -39,11 +39,12 @@ RSpec.shared_context 'crud' do |sr_template|
         skip "#{SR} creation failed" unless @conf[:create]
 
         increase_runtime_hardware(@conf[:runtime], 'increase')
+        rename_runtime(@conf[:runtime])
 
         timeout = @conf[:conf][:tests][:timeouts][:get]
         1.upto(timeout) do |t|
             if t == timeout
-                raise "Timeut reached for #{SR} deployment"
+                raise "Timeout reached for #{SR} deployment"
             end
 
             response = @conf[:client][:engine].update(@conf[:id], @conf[:runtime])

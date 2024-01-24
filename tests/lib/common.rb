@@ -45,7 +45,7 @@ def verify_sr_spec(specification, runtime)
     expect(response.code.to_i).to eq(200) # service has been created
 
     ##############################
-    # Verify funtion information #
+    # Verify function information #
     ##############################
     ProvisionEngine::Function::FUNCTIONS.each do |role|
         next unless specification[role] && !specification[role]['FLAVOUR'].empty?
@@ -199,6 +199,10 @@ def increase_runtime_hardware(specification, mode = 'multiply')
             raise "Invalid #{SR} hardware update mode"
         end
     end
+end
+
+def rename_runtime(specification, name = SecureRandom.alphanumeric)
+    specification[SRR]['NAME'] = name
 end
 
 def strip_consequential_info(specification)

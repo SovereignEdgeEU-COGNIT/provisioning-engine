@@ -229,6 +229,8 @@ module ProvisionEngine
                     error = "Failed to update #{SRF} #{schevice}"
                     return ProvisionEngine::Error.new(rc, error, response.message)
                 end
+
+                vm.resched # Just the flag. Responsability lies on scheduler
             end
 
             update
