@@ -1,5 +1,6 @@
 SR = 'Serverless Runtime'.freeze
 SRR = 'SERVERLESS_RUNTIME'.freeze
+T = '//TEMPLATE/'.freeze
 
 HARDWARE = {
     'CPU' => 1,
@@ -25,20 +26,27 @@ def verify_sr_spec(specification, runtime)
     specification = specification[SRR]
     runtime = runtime[SRR]
 
-    # optional name has been applied if given
-    expect(runtime['NAME']).to eq(specification['NAME']) if specification['NAME']
+    #############################
+    # Verify runtime infomation #
+    #############################
 
-    # mandatory information is present on SR object
-    ['SERVICE_ID', 'DEVICE_INFO', 'SCHEDULING'].each do |mandatory|
-        expect(runtime.key?(mandatory)).to be(true)
+    expect(runtime['NAME']).to eq(specification['NAME']) if specification['NAME']
+    expect(runtime.key?('SERVICE_ID')).to be(true)
+
+    ['DEVICE_INFO', 'SCHEDULING'].each do |schevice|
+        next unless specification[schevice] || specification[schevice].empty?
+
+        specification[schevice].each do |sd|
+            expect(vm['//USER_TEMPLATE/'][sd]).to eq(sd)
+        end
     end
 
-    # service has been created
     response = @conf[:client][:oneflow].get("/service/#{runtime['SERVICE_ID']}")
-    expect(response.code.to_i).to eq(200)
+    expect(response.code.to_i).to eq(200) # service has been created
 
-    t = '//TEMPLATE/'
-
+    ##############################
+    # Verify funtion information #
+    ##############################
     ProvisionEngine::Function::FUNCTIONS.each do |role|
         next unless specification[role] && !specification[role]['FLAVOUR'].empty?
 
@@ -50,7 +58,7 @@ def verify_sr_spec(specification, runtime)
             raise "Error getting #{SR} function VM #{role} \n#{response.message}"
         end
 
-        nic = "#{t}NIC[NIC_ID=\"0\"]/"
+        nic = "#{T}NIC[NIC_ID=\"0\"]/"
 
         # mandatory role information exists
         ['FLAVOUR', 'VM_ID', 'STATE', 'ENDPOINT'].each do |mandatory|
@@ -68,7 +76,7 @@ def verify_sr_spec(specification, runtime)
         ['CPU', 'VCPU', 'MEMORY'].each do |capacity|
             next unless specification[role][capacity]
 
-            expect(vm["#{t}#{capacity}"].to_f).to eq(specification[role][capacity].to_f)
+            expect(vm["#{T}#{capacity}"].to_f).to eq(specification[role][capacity].to_f)
         end
 
         ['EXTERNAL_IP', 'IP6', 'IP'].each do |address|
@@ -79,12 +87,12 @@ def verify_sr_spec(specification, runtime)
         end
 
         if specification[role]['DISK_SIZE']
-            expect(vm["#{t}DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
+            expect(vm["#{T}DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
         end
 
-        if vm["#{t}ERROR"]
+        if vm["#{T}ERROR"]
             expect(runtime[role]['STATE']).to eq('ERROR')
-            expect(runtime[role]['ERROR']).to eq(vm["#{t}ERROR"])
+            expect(runtime[role]['ERROR']).to eq(vm["#{T}ERROR"])
         end
     end
 end
