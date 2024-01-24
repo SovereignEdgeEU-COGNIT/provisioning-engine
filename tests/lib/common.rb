@@ -16,7 +16,7 @@ def load_examples(params = nil)
     include_context(examples, params) if conf[:examples][examples]
 end
 
-def verify_sr_spec(specification, runtime)
+def verify_sr_spec(specification, runtime, resched = false)
     [specification, runtime].each do |sr|
         response = ProvisionEngine::ServerlessRuntime.validate(sr)
 
@@ -88,6 +88,11 @@ def verify_sr_spec(specification, runtime)
 
         if specification[role]['DISK_SIZE']
             expect(vm["#{T}DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
+        end
+
+        if resched
+            # Get VM history
+            # verify it got migrated to a different host
         end
 
         if vm["#{T}ERROR"]

@@ -53,7 +53,7 @@ RSpec.shared_context 'crud' do |sr_template|
 
             case rc
             when 200
-                verify_sr_spec(@conf[:runtime], body)
+                verify_sr_spec(@conf[:runtime], body, true)
                 break
             when 423
                 pp "Waiting for #{SR} to be RUNNING"
