@@ -147,7 +147,7 @@ module ProvisionEngine
             specification = specification[SRR]
 
             ProvisionEngine::Function::FUNCTIONS.each do |function|
-                next if specification[function].nil? || specification[function]['FLAVOUR'].empty?
+                next if specification[function].nil? || specification[function]['FLAVOUR'].empty? || @body[function].nil?
 
                 vm_id = @body[function]['VM_ID']
                 if vm_id.nil?
@@ -632,6 +632,42 @@ module ProvisionEngine
 
         def cclient?
             raise "Missing #{SR} Cloud Client" unless @cclient
+        end
+
+        #
+        # Function objects that back the Serverless Runtime
+        #
+        # @return [Array] ProvisionEngine::Function elements
+        #
+        def functions
+            load?
+            cclient?
+
+            functions = []
+
+            ProvisionEngine::Function::FUNCTIONS.each do |function|
+                next if @body[function].nil?
+
+                vm_id = @body[function]['VM_ID']
+                if vm_id.nil?
+                    rc = 500
+                    error = "No VM_ID found for function #{function}"
+                    return ProvisionEngine::Error.new(rc, error)
+                end
+
+                vm = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)
+                response = vm.info
+
+                if OpenNebula.is_error?(response)
+                    rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                    error = "Failed to read #{SRF} #{function}"
+                    return ProvisionEngine::Error.new(rc, error, response.message)
+                end
+
+                functions << vm
+            end
+
+            functions
         end
 
     end

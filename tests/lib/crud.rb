@@ -40,6 +40,7 @@ RSpec.shared_context 'crud' do |sr_template|
 
         increase_runtime_hardware(@conf[:runtime], 'increase')
         rename_runtime(@conf[:runtime])
+        randomize_schevice?(@conf[:runtime])
 
         timeout = @conf[:conf][:tests][:timeouts][:get]
         1.upto(timeout) do |t|

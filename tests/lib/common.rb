@@ -58,6 +58,9 @@ def verify_sr_spec(specification, runtime, resched = false)
             raise "Error getting #{SR} function VM #{role} \n#{response.message}"
         end
 
+        # TODO: Improve. Could disappear before check
+        expect(vm['//RESCHED']).to eq(1) if resched
+
         nic = "#{T}NIC[NIC_ID=\"0\"]/"
 
         # mandatory role information exists
@@ -88,11 +91,6 @@ def verify_sr_spec(specification, runtime, resched = false)
 
         if specification[role]['DISK_SIZE']
             expect(vm["#{T}DISK[DISK_ID=\"0\"]/SIZE"].to_i).to eq(specification[role]['DISK_SIZE'])
-        end
-
-        if resched
-            # Get VM history
-            # verify it got migrated to a different host
         end
 
         if vm["#{T}ERROR"]
@@ -208,6 +206,20 @@ end
 
 def rename_runtime(specification, name = SecureRandom.alphanumeric)
     specification[SRR]['NAME'] = name
+end
+
+def randomize_schevice?(specification)
+    ['SCHEDULING', 'DEVICE_INFO'].each do |schevice|
+        next if specification[SRR][schevice].nil? || specification[SRR][schevice].empty?
+
+        specification[SRR][schevice].each_key do |k, v|
+            if v.is_a?(Int)
+                specification[SRR][schevice][k] = rand(2147483647)
+            else
+                specification[SRR][schevice][k] = SecureRandom.alphanumeric
+            end
+        end
+    end
 end
 
 def strip_consequential_info(specification)
