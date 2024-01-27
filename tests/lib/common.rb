@@ -59,7 +59,7 @@ def verify_sr_spec(specification, runtime, resched = false)
         end
 
         # TODO: Improve. Could disappear before check
-        expect(vm['//RESCHED']).to eq(1) if resched
+        expect(vm['//RESCHED'].to_i).to eq(1) if resched
 
         nic = "#{T}NIC[NIC_ID=\"0\"]/"
 
