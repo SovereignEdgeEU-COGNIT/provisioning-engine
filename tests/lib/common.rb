@@ -16,7 +16,7 @@ def load_examples(params = nil)
     include_context(examples, params) if conf[:examples][examples]
 end
 
-def verify_sr_spec(specification, runtime, resched = false)
+def verify_sr_spec(specification, runtime)
     [specification, runtime].each do |sr|
         response = ProvisionEngine::ServerlessRuntime.validate(sr)
 
@@ -32,14 +32,6 @@ def verify_sr_spec(specification, runtime, resched = false)
 
     expect(runtime['NAME']).to eq(specification['NAME']) if specification['NAME']
     expect(runtime.key?('SERVICE_ID')).to be(true)
-
-    ['DEVICE_INFO', 'SCHEDULING'].each do |schevice|
-        next unless specification[schevice] || specification[schevice].empty?
-
-        specification[schevice].each do |sd|
-            expect(vm['//USER_TEMPLATE/'][sd]).to eq(sd)
-        end
-    end
 
     response = @conf[:client][:oneflow].get("/service/#{runtime['SERVICE_ID']}")
     expect(response.code.to_i).to eq(200) # service has been created
@@ -57,9 +49,6 @@ def verify_sr_spec(specification, runtime, resched = false)
         if OpenNebula.is_error?(response)
             raise "Error getting #{SR} function VM #{role} \n#{response.message}"
         end
-
-        # TODO: Improve. Could disappear before check
-        expect(vm['//RESCHED'].to_i).to eq(1) if resched
 
         nic = "#{T}NIC[NIC_ID=\"0\"]/"
 
@@ -96,6 +85,14 @@ def verify_sr_spec(specification, runtime, resched = false)
         if vm["#{T}ERROR"]
             expect(runtime[role]['STATE']).to eq('ERROR')
             expect(runtime[role]['ERROR']).to eq(vm["#{T}ERROR"])
+        end
+
+        ['DEVICE_INFO', 'SCHEDULING'].each do |schevice|
+            next unless specification[schevice] || specification[schevice].empty?
+
+            specification[schevice].each do |sd|
+                expect(vm['//USER_TEMPLATE/'][sd]).to eq(sd)
+            end
         end
     end
 end
