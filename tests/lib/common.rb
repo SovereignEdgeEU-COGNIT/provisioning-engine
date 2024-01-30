@@ -1,6 +1,7 @@
 SR = 'Serverless Runtime'.freeze
 SRR = 'SERVERLESS_RUNTIME'.freeze
 T = '//TEMPLATE/'.freeze
+UT = '//USER_TEMPLATE/'.freeze
 
 HARDWARE = {
     'CPU' => 1,
@@ -91,7 +92,7 @@ def verify_sr_spec(specification, runtime)
             next unless specification[schevice] || specification[schevice].empty?
 
             specification[schevice].each do |sd|
-                expect(vm['//USER_TEMPLATE/'][sd]).to eq(sd)
+                expect(vm["#{UT}#{sd}"]).to eq(sd)
             end
         end
     end
