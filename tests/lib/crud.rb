@@ -50,25 +50,40 @@ RSpec.shared_context 'crud' do |sr_template|
 
             response = @conf[:client][:engine].update(@conf[:id], @conf[:runtime])
             rc = response.code
-            body = JSON.parse(response.body)
+            runtime = JSON.parse(response.body)
 
             case rc
             when 200
-                verify_sr_spec(@conf[:runtime], body)
+                pp runtime
+
+                verify_sr_spec(@conf[:runtime], runtime)
                 break
             when 423
                 pp "Waiting for #{SR} to be RUNNING"
-                verify_error(body)
+                verify_error(runtime)
 
                 sleep 1
                 next
             else
-                pp body
-                verify_error(body)
+                pp runtime
+                verify_error(runtime)
 
                 raise "Unexpected error code #{rc}"
             end
         end
+    end
+
+    it "read an updated #{SR}" do
+        skip "#{SR} creation failed" unless @conf[:create]
+
+        response = @conf[:client][:engine].get(@conf[:id])
+        expect(response.code).to eq(200)
+
+        runtime = JSON.parse(response.body)
+
+        pp runtime
+
+        verify_sr_spec(@conf[:runtime], runtime)
     end
 
     it "delete a #{SR}" do

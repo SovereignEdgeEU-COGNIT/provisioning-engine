@@ -31,11 +31,11 @@ def verify_sr_spec(specification, runtime)
     # Verify runtime infomation #
     #############################
 
-    expect(runtime['NAME']).to eq(specification['NAME']) if specification['NAME']
-    expect(runtime.key?('SERVICE_ID')).to be(true)
-
     response = @conf[:client][:oneflow].get("/service/#{runtime['SERVICE_ID']}")
     expect(response.code.to_i).to eq(200) # service has been created
+
+    expect(runtime.key?('SERVICE_ID')).to be(true)
+    expect(runtime['NAME']).to eq(specification['NAME']) if specification['NAME']
 
     ##############################
     # Verify function information #
@@ -91,8 +91,8 @@ def verify_sr_spec(specification, runtime)
         ['DEVICE_INFO', 'SCHEDULING'].each do |schevice|
             next unless specification[schevice] || specification[schevice].empty?
 
-            specification[schevice].each do |sd|
-                expect(vm["#{UT}#{sd}"]).to eq(sd)
+            specification[schevice].each do |k, v|
+                expect(vm["#{UT}#{schevice}/#{k}"]).to eq(v.to_s)
             end
         end
     end
@@ -210,8 +210,8 @@ def randomize_schevice?(specification)
     ['SCHEDULING', 'DEVICE_INFO'].each do |schevice|
         next if specification[SRR][schevice].nil? || specification[SRR][schevice].empty?
 
-        specification[SRR][schevice].each_key do |k, v|
-            if v.is_a?(Int)
+        specification[SRR][schevice].each do |k, v|
+            if v.is_a?(Integer)
                 specification[SRR][schevice][k] = rand(2147483647)
             else
                 specification[SRR][schevice][k] = SecureRandom.alphanumeric
