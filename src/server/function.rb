@@ -42,6 +42,10 @@ module ProvisionEngine
                 'PROLOG_MIGRATE_UNKNOWN_FAILURE'
             ]
         }.freeze
+        SCHED_MAP = {
+            'REQUIREMENTS' => 'SCHED_REQUIREMENTS',
+            'POLICY' => 'SCHED_RANK'
+        }
         FUNCTIONS = ['FAAS', 'DAAS'].freeze
 
         T = '//TEMPLATE/'.freeze
@@ -309,6 +313,40 @@ module ProvisionEngine
             end
 
             return STATES[:updating]
+        end
+
+        #
+        # Translates specification parameters to Function VM USER_TEMPLATE
+        #
+        # @param [Hash] specification Serverless Runtime definition
+        #
+        # @return [String] User Template string compatible with opennebula VM Template
+        #
+        def self.map_user_template(specification)
+            schevice=''
+
+            if specification.key?('SCHEDULING')
+                specification['SCHEDULING'].each do |property, value|
+                    schevice << "#{Function::SCHED_MAP[property]}=\"#{value}\"\n" if value
+                end
+            end
+
+            if specification.key?('DEVICE_INFO')
+                i_template = ''
+
+                specification['DEVICE_INFO'].each do |property, value|
+                    i_template << "#{property}=\"#{value}\",\n" if value
+                end
+
+                if !i_template.empty?
+                    i_template.reverse!.sub!("\n", '').reverse!
+                    i_template.reverse!.sub!(',', '').reverse!
+                end
+
+                schevice << "DEVICE_INFO=[#{i_template}]\n"
+            end
+
+            schevice
         end
 
     end

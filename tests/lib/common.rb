@@ -89,10 +89,16 @@ def verify_sr_spec(specification, runtime)
         end
 
         ['DEVICE_INFO', 'SCHEDULING'].each do |schevice|
-            next unless specification[schevice] || specification[schevice].empty?
+            next unless specification.key?(schevice)
 
-            specification[schevice].each do |k, v|
-                expect(vm["#{UT}#{schevice}/#{k}"]).to eq(v.to_s)
+            if schevice == 'SCHEDULING'
+                specification[schevice].each do |k, v|
+                    expect(vm["#{UT}#{ProvisionEngine::Function::SCHED_MAP[k]}"]).to eq(v.to_s)
+                end
+            else
+                specification[schevice].each do |k, v|
+                    expect(vm["#{UT}#{schevice}/#{k}"]).to eq(v.to_s)
+                end
             end
         end
     end

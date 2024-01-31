@@ -212,25 +212,7 @@ module ProvisionEngine
 
                 end
 
-                schevice=''
-
-                # update user template on each Function VM with client info and requirements
-                ['SCHEDULING', 'DEVICE_INFO'].each do |i|
-                    next unless specification.key?(i)
-                    next if @body[i] == specification[i]
-
-                    i_template = ''
-                    specification[i].each do |property, value|
-                        i_template << "#{property}=\"#{value}\",\n" if value
-                    end
-
-                    if !i_template.empty?
-                        i_template.reverse!.sub!("\n", '').reverse!
-                        i_template.reverse!.sub!(',', '').reverse!
-                    end
-
-                    schevice << "#{i}=[#{i_template}]\n"
-                end
+                schevice = Function.map_user_template(specification)
 
                 response = vm.update(schevice, true) unless schevice.empty?
 
@@ -411,23 +393,7 @@ module ProvisionEngine
                 merge_template = {
                     'roles' => []
                 }
-                schevice=''
-
-                ['SCHEDULING', 'DEVICE_INFO'].each do |i|
-                    next unless specification.key?(i)
-
-                    i_template = ''
-                    specification[i].each do |property, value|
-                        i_template << "#{property}=\"#{value}\",\n" if value
-                    end
-
-                    if !i_template.empty?
-                        i_template.reverse!.sub!("\n", '').reverse!
-                        i_template.reverse!.sub!(',', '').reverse!
-                    end
-
-                    schevice << "#{i}=[#{i_template}]\n"
-                end
+                schevice = Function.map_user_template(specification)
 
                 ProvisionEngine::Function::FUNCTIONS.each do |role|
                     next unless specification[role] && !specification[role]['FLAVOUR'].empty?
