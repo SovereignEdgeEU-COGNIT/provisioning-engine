@@ -5,7 +5,7 @@ require 'tempfile'
 # How to use
 # ./prepare.rb http://one_host:2633/RPC2 http://one_host:2474 0 1
 
-GEMS = ['rspec', 'rack-test'] # gems required for running the tests
+GEMS = ['rspec -v 3.12.0', 'rack-test -v 2.1.0'] # gems required for running the tests
 CONF_PATH = '/etc/provision-engine/engine.conf'
 
 def install_gems

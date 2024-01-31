@@ -111,12 +111,9 @@ module ProvisionEngine
         #
         def update
             cclient?
-            initial_state = to_hash
 
             response = ProvisionEngine::ServerlessRuntime.sync(@cclient, @body)
             return response unless response[0] == 200
-
-            return [200, self] if to_hash == initial_state
 
             @cclient.logger.info("Updating #{SRD} #{@id}")
             response = super()
@@ -147,7 +144,7 @@ module ProvisionEngine
             specification = specification[SRR]
 
             ProvisionEngine::Function::FUNCTIONS.each do |function|
-                next if specification[function].nil? || specification[function]['FLAVOUR'].empty?
+                next if specification[function].nil? || specification[function]['FLAVOUR'].empty? || @body[function].nil?
 
                 vm_id = @body[function]['VM_ID']
                 if vm_id.nil?
@@ -215,20 +212,24 @@ module ProvisionEngine
 
                 end
 
-                # Update document body and VMs USER_TEMPLATE
-                ['SCHEDULING', 'DEVICE_INFO'].each do |schevice|
-                    next if specification[function][schevice].nil?
-                    next if specification[function][schevice] == @body[SRR][function][schevice]
+                schevice = Function.map_user_template(specification)
 
-                    @body[SRR][function][schevice] = specification[function][schevice]
-                    vm.update(specification[function][schevice], true)
+                response = vm.update(schevice, true) unless schevice.empty?
 
-                    next unless OpenNebula.is_error?(response)
-
+                if OpenNebula.is_error?(response)
                     rc = ProvisionEngine::Error.map_error_oned(response.errno)
                     error = "Failed to update #{SRF} #{schevice}"
                     return ProvisionEngine::Error.new(rc, error, response.message)
                 end
+
+                vm.resched # Just the flag. Responsability lies on scheduler
+            end
+
+            # update document body after VMs were succesfully updated
+            ['SCHEDULING', 'DEVICE_INFO'].each do |i|
+                next unless specification.key?(i)
+
+                @body[i] = specification[i]
             end
 
             update
@@ -392,23 +393,7 @@ module ProvisionEngine
                 merge_template = {
                     'roles' => []
                 }
-                schevice=''
-
-                ['SCHEDULING', 'DEVICE_INFO'].each do |i|
-                    next unless specification.key?(i)
-
-                    i_template = ''
-                    specification[i].each do |property, value|
-                        i_template << "#{property}=\"#{value}\",\n" if value
-                    end
-
-                    if !i_template.empty?
-                        i_template.reverse!.sub!("\n", '').reverse!
-                        i_template.reverse!.sub!(',', '').reverse!
-                    end
-
-                    schevice << "#{i}=[#{i_template}]\n"
-                end
+                schevice = Function.map_user_template(specification)
 
                 ProvisionEngine::Function::FUNCTIONS.each do |role|
                     next unless specification[role] && !specification[role]['FLAVOUR'].empty?
@@ -551,7 +536,7 @@ module ProvisionEngine
                 return ProvisionEngine::Error.new(rc, error, response.error)
             end
 
-            return [200, ''] unless name != new_name
+            return [200, ''] if name == new_name
 
             error = "Failed to rename #{SR}"
             message = "#{SRD} name \"#{name}\" mismatches target name #{new_name} after succesful rename operation"
@@ -565,10 +550,9 @@ module ProvisionEngine
 
         # Service must have been created prior to allocating the document
         def allocate(specification)
-            specification['registration_time'] = Integer(Time.now)
-
             if specification['NAME']
                 name = specification['NAME']
+                specification.delete('NAME')
             else
                 name = "#{ServerlessRuntime.tuple(specification)}_#{SecureRandom.uuid}"
             end
@@ -595,9 +579,7 @@ module ProvisionEngine
                 }
             }
             rsr = runtime[SRR]
-
             rsr.merge!(@body)
-            rsr.delete('registration_time')
 
             runtime
         end
@@ -630,6 +612,42 @@ module ProvisionEngine
 
         def cclient?
             raise "Missing #{SR} Cloud Client" unless @cclient
+        end
+
+        #
+        # Function objects that back the Serverless Runtime
+        #
+        # @return [Array] ProvisionEngine::Function elements
+        #
+        def functions
+            load?
+            cclient?
+
+            functions = []
+
+            ProvisionEngine::Function::FUNCTIONS.each do |function|
+                next if @body[function].nil?
+
+                vm_id = @body[function]['VM_ID']
+                if vm_id.nil?
+                    rc = 500
+                    error = "No VM_ID found for function #{function}"
+                    return ProvisionEngine::Error.new(rc, error)
+                end
+
+                vm = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)
+                response = vm.info
+
+                if OpenNebula.is_error?(response)
+                    rc = ProvisionEngine::Error.map_error_oned(response.errno)
+                    error = "Failed to read #{SRF} #{function}"
+                    return ProvisionEngine::Error.new(rc, error, response.message)
+                end
+
+                functions << vm
+            end
+
+            functions
         end
 
     end

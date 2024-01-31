@@ -1,0 +1,15 @@
+{
+  "SERVERLESS_RUNTIME": {
+    "FAAS": {
+      "FLAVOUR": "Function"
+    },
+    "SCHEDULING": {
+      "POLICY": "energy",
+      "REQUIREMENTS": "FREECPU > 10"
+    },
+    "DEVICE_INFO": {
+      "LATENCY_TO_PE": 100,
+      "GEOGRAPHIC_LOCATION": "Madrid"
+    }
+  }
+}

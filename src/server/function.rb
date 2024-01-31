@@ -42,9 +42,14 @@ module ProvisionEngine
                 'PROLOG_MIGRATE_UNKNOWN_FAILURE'
             ]
         }.freeze
+        SCHED_MAP = {
+            'REQUIREMENTS' => 'SCHED_REQUIREMENTS',
+            'POLICY' => 'SCHED_RANK'
+        }
         FUNCTIONS = ['FAAS', 'DAAS'].freeze
 
         T = '//TEMPLATE/'.freeze
+        UT = '//USER_TEMPLATE/'.freeze
         NIC = "#{T}NIC[NIC_ID=\"0\"]".freeze
         SRF = 'Serverless Runtime Function VM'.freeze
 
@@ -56,7 +61,7 @@ module ProvisionEngine
             {
                 :memory => self["#{T}/MEMORY"].to_i,
                 :resize => {
-                    :enabled => self['//USER_TEMPLATE/MEMORY_HOT_ADD_ENABLED'],
+                    :enabled => self["#{UT}MEMORY_HOT_ADD_ENABLED"],
                     :mode => self["#{T}/MEMORY_RESIZE_MODE"],
                     :limit => self["#{T}/MEMORY_MAX"].to_i
                 }
@@ -69,7 +74,7 @@ module ProvisionEngine
                 :cpu => self["#{T}/CPU"].to_f,
                 :vcpu => self["#{T}/VCPU"].to_i,
                 :resize => {
-                    :enabled => self['//USER_TEMPLATE/CPU_HOT_ADD_ENABLED'],
+                    :enabled => self["#{UT}CPU_HOT_ADD_ENABLED"],
                     :limit => self["#{T}/VCPU_MAX"].to_i
                 }
             }
@@ -81,6 +86,14 @@ module ProvisionEngine
 
         def error
             self["#{T}ERROR"]
+        end
+
+        def report_ready?
+            self["#{T}/CONTEXT/REPORT_READY"] == 'YES'
+        end
+
+        def ready?
+            self["#{UT}READY"] == 'YES'
         end
 
         #
@@ -199,7 +212,7 @@ module ProvisionEngine
         end
 
         #
-        # CPU and Memory capacity resize operations for the Serverless Runtime Function as a Service Virtual Machine
+        # CPU and Memory capacity resize operations for the Serverless Runtime Function
         #
         # @param [Hash] specification Desired VM state with capactiy changes
         #
@@ -279,16 +292,61 @@ module ProvisionEngine
         end
 
         #
-        # Maps an OpenNebula VM state to the accepted Function VM states
+        # Maps an OpenNebula VM state to the accepted Function VM states.
+        # When the Function VM instance contains CONTEXT/REPORT_READY=YES
+        # The RUNNING state for the Function will need to meet both hypervisor RUNNING
+        # and onegate READY verification.
         #
         # @return [String] Serverless Runtime Function state
         #
         def state_function
             STATE_MAP.each do |function_state, lcm_states|
+                if lcm_state_str == 'RUNNING'
+                    return STATES[:running] unless report_ready?
+
+                    return STATES[:running] if ready?
+
+                    return STATES[:pending]
+                end
+
                 return function_state if lcm_states.include?(lcm_state_str)
             end
 
             return STATES[:updating]
+        end
+
+        #
+        # Translates specification parameters to Function VM USER_TEMPLATE
+        #
+        # @param [Hash] specification Serverless Runtime definition
+        #
+        # @return [String] User Template string compatible with opennebula VM Template
+        #
+        def self.map_user_template(specification)
+            schevice=''
+
+            if specification.key?('SCHEDULING')
+                specification['SCHEDULING'].each do |property, value|
+                    schevice << "#{Function::SCHED_MAP[property]}=\"#{value}\"\n" if value
+                end
+            end
+
+            if specification.key?('DEVICE_INFO')
+                i_template = ''
+
+                specification['DEVICE_INFO'].each do |property, value|
+                    i_template << "#{property}=\"#{value}\",\n" if value
+                end
+
+                if !i_template.empty?
+                    i_template.reverse!.sub!("\n", '').reverse!
+                    i_template.reverse!.sub!(',', '').reverse!
+                end
+
+                schevice << "DEVICE_INFO=[#{i_template}]\n"
+            end
+
+            schevice
         end
 
     end

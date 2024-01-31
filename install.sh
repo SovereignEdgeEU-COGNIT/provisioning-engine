@@ -3,7 +3,7 @@
 install() {
 	# dependencies
 	for gem in "${gems[@]}"; do
-		is_gem_installed "$gem" || sudo gem install "$gem"
+		is_gem_installed $gem || sudo gem install $gem
 	done
 
 	[ -d "$CONF_DIR" ] || sudo mkdir "$CONF_DIR"
@@ -87,7 +87,7 @@ EXEC_PATH="/usr/local/bin/${EXEC_FILE}"
 INSTALL_DIR="/opt/provision-engine"
 MODULES="client.rb configuration.rb log.rb server.rb runtime.rb error.rb function.rb"
 
-gems=("opennebula" "sinatra" "logger" "json-schema") # check requires on server.rb
+gems=("opennebula" "sinatra -v 3.1.0" "logger -v 1.6.0" "json-schema -v 4.1.1") # check requires on server.rb
 
 action="${1:-"install"}"
 setup_mode="${2:-"symlink"}"
