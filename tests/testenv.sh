@@ -29,10 +29,12 @@ echo -e NAME=\"github_actions_no_lease\"\\nVN_MAD=\"bridge\"\\nAR=[TYPE=\"ETHERN
 #   15 github_a oneadmin Github Actions FAILED_DEPLOY                                                                                                                 11/14 02:15:05
 #    9 github_a oneadmin Github Actions
 
+# "shutdown_action": "terminate-hard",
+
 # - name: Create Service Templates for Github Actions
 #  575 github_a oneadmin FAILED_DEPLOY                                                                                                                                11/14 02:18:12
 #  276 github_a oneadmin DenyVMTemplate                                                                                                                               10/13 22:17:10
-#  199 github_a oneadmin Function-Data                                                                                                                                10/10 22:54:20
+#  199 github_a oneadmin Function-Data    # add DAAS role after clone from Function                                                                                                                            10/10 22:54:20
 #   63 github_a oneadmin Function
 
 services="Function, Function-Data DenyVMTemplate FAILED_DEPLOY"
