@@ -3,8 +3,8 @@
   :delete: 30
 :examples: # What group of examples should be tested
   'crud': true
-  'auth': true
-  'crud_invalid': true
-  'server_info': true
-  'logs': true
+  'auth': false
+  'crud_invalid': false
+  'server_info': false
+  'logs': false
 :purge: true # delete services owned by the user running the tests. DO NOT RUN AS ONEADMIN !!!

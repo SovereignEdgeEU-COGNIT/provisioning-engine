@@ -88,18 +88,20 @@ def verify_sr_spec(specification, runtime)
             expect(runtime[role]['ERROR']).to eq(vm["#{T}ERROR"])
         end
 
-        ['DEVICE_INFO', 'SCHEDULING'].each do |schevice|
-            next unless specification.key?(schevice)
+        # Verify VM.USER_TEMPLATE
 
-            if schevice == 'SCHEDULING'
-                specification[schevice].each do |k, v|
-                    expect(vm["#{UT}#{ProvisionEngine::Function::SCHED_MAP[k]}"]).to eq(v.to_s)
-                end
-            else
-                specification[schevice].each do |k, v|
-                    expect(vm["#{UT}#{schevice}/#{k}"]).to eq(v.to_s)
-                end
+        expect(vm["#{UT}FLAVOURS"]).to eq(ProvisionEngine::ServerlessRuntime.tuple(specification))
+
+        if specification.key?('SCHEDULING')
+            specification['SCHEDULING'].each do |k, v|
+                expect(vm["#{UT}#{ProvisionEngine::Function::SCHED_MAP[k]}"]).to eq(v.to_s)
             end
+        end
+
+        next unless specification.key?('DEVICE_INFO')
+
+        specification['DEVICE_INFO'].each do |k, v|
+            expect(vm["#{UT}DEVICE_INFO/#{k}"]).to eq(v.to_s)
         end
     end
 end

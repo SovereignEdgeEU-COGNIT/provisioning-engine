@@ -327,7 +327,7 @@ module ProvisionEngine
 
             if specification.key?('SCHEDULING')
                 specification['SCHEDULING'].each do |property, value|
-                    schevice << "#{Function::SCHED_MAP[property]}=\"#{value}\"\n" if value
+                    schevice << "#{Function::SCHED_MAP[property]}=\"#{value.upcase}\"\n" if value
                 end
             end
 
@@ -345,6 +345,8 @@ module ProvisionEngine
 
                 schevice << "DEVICE_INFO=[#{i_template}]\n"
             end
+
+            schevice << "FLAVOURS=\"#{ProvisionEngine::ServerlessRuntime.tuple(specification)}\"\n"
 
             schevice
         end
