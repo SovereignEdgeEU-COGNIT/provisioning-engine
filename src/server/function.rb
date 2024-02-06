@@ -143,7 +143,7 @@ module ProvisionEngine
         #
         # @return [String] vm_template contents for a oneflow service template
         #
-        def self.vm_template_contents(specification, vm_template, conf_capacity)
+        def self.map_vm_template(specification, vm_template, conf_capacity)
             disk_size = specification['DISK_SIZE']
             disk_size ||= conf_capacity[:disk][:default]
 
@@ -182,6 +182,40 @@ module ProvisionEngine
             xaas << "MEMORY_MAX=#{memory_max}"
 
             xaas.join("\n")
+        end
+
+        #
+        # Translates specification parameters to Function VM USER_TEMPLATE
+        #
+        # @param [Hash] specification Serverless Runtime definition
+        #
+        # @return [String] User Template string compatible with opennebula VM Template
+        #
+        def self.map_user_template(specification)
+            user_template = ''
+
+            if specification.key?('SCHEDULING')
+                specification['SCHEDULING'].each do |property, value|
+                    user_template << "#{Function::SCHED_MAP[property]}=\"#{value.upcase}\"\n" if value
+                end
+            end
+
+            if specification.key?('DEVICE_INFO')
+                i_template = ''
+
+                specification['DEVICE_INFO'].each do |property, value|
+                    i_template << "#{property}=\"#{value}\",\n" if value
+                end
+
+                if !i_template.empty?
+                    i_template.reverse!.sub!("\n", '').reverse!
+                    i_template.reverse!.sub!(',', '').reverse!
+                end
+
+                user_template << "DEVICE_INFO=[#{i_template}]\n"
+            end
+
+            user_template
         end
 
         #
@@ -313,42 +347,6 @@ module ProvisionEngine
             end
 
             return STATES[:updating]
-        end
-
-        #
-        # Translates specification parameters to Function VM USER_TEMPLATE
-        #
-        # @param [Hash] specification Serverless Runtime definition
-        #
-        # @return [String] User Template string compatible with opennebula VM Template
-        #
-        def self.map_user_template(specification)
-            schevice=''
-
-            if specification.key?('SCHEDULING')
-                specification['SCHEDULING'].each do |property, value|
-                    schevice << "#{Function::SCHED_MAP[property]}=\"#{value.upcase}\"\n" if value
-                end
-            end
-
-            if specification.key?('DEVICE_INFO')
-                i_template = ''
-
-                specification['DEVICE_INFO'].each do |property, value|
-                    i_template << "#{property}=\"#{value}\",\n" if value
-                end
-
-                if !i_template.empty?
-                    i_template.reverse!.sub!("\n", '').reverse!
-                    i_template.reverse!.sub!(',', '').reverse!
-                end
-
-                schevice << "DEVICE_INFO=[#{i_template}]\n"
-            end
-
-            schevice << "FLAVOURS=\"#{ProvisionEngine::ServerlessRuntime.tuple(specification)}\"\n"
-
-            schevice
         end
 
     end
