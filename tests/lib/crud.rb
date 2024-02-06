@@ -54,8 +54,6 @@ RSpec.shared_context 'crud' do |sr_template|
 
             case rc
             when 200
-                pp runtime
-
                 verify_sr_spec(@conf[:runtime], runtime)
                 break
             when 423
@@ -65,7 +63,6 @@ RSpec.shared_context 'crud' do |sr_template|
                 sleep 1
                 next
             else
-                pp runtime
                 verify_error(runtime)
 
                 raise "Unexpected error code #{rc}"
@@ -80,8 +77,6 @@ RSpec.shared_context 'crud' do |sr_template|
         expect(response.code).to eq(200)
 
         runtime = JSON.parse(response.body)
-
-        pp runtime
 
         verify_sr_spec(@conf[:runtime], runtime)
     end

@@ -1,19 +1,12 @@
 {
   "SERVERLESS_RUNTIME": {
-    "NAME": "Example Serverless Runtime",
+    "NAME": "Example Serverless Runtime with defined SCHEDULING",
     "FAAS": {
-      "CPU": 1,
-      "MEMORY": 768,
-      "DISK_SIZE": 3072,
-      "FLAVOUR": "Function",
-      "ENDPOINT": ""
+      "FLAVOUR": "Function"
     },
     "SCHEDULING": {
       "POLICY": "energy",
       "REQUIREMENTS": "energy=50"
-    },
-    "DEVICE_INFO": {
-      "GEOGRAPHIC_LOCATION": "{'ip':'193.145.247.253','city':'Arrasate / Mondragón','region':'Basque Country','country':'ES','loc':'43.0644,-2.4898','org':'AS766 Entidad Publica Empresarial Red.es','postal':'20500','timezone':'Europe/Madrid','readme':'https://ipinfo.io/missingauth'}"
     }
   }
 }

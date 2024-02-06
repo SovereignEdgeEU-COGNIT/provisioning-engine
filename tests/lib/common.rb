@@ -94,7 +94,7 @@ def verify_sr_spec(specification, runtime)
 
         if specification.key?('SCHEDULING')
             specification['SCHEDULING'].each do |k, v|
-                expect(vm["#{UT}#{ProvisionEngine::Function::SCHED_MAP[k]}"]).to eq(v.to_s)
+                expect(vm["#{UT}#{ProvisionEngine::Function::SCHED_MAP[k]}"]).to eq(v.to_s.upcase)
             end
         end
 
