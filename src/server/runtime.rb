@@ -212,13 +212,12 @@ module ProvisionEngine
 
                 end
 
-                schevice = Function.map_user_template(specification)
-
-                response = vm.update(schevice, true) unless schevice.empty?
+                user_template = Function.map_user_template(specification)
+                response = vm.update(user_template, true) unless user_template.empty?
 
                 if OpenNebula.is_error?(response)
                     rc = ProvisionEngine::Error.map_error_oned(response.errno)
-                    error = "Failed to update #{SRF} #{schevice}"
+                    error = "Failed to update #{SRF} #{user_template}"
                     return ProvisionEngine::Error.new(rc, error, response.message)
                 end
 
@@ -390,10 +389,12 @@ module ProvisionEngine
             service_templates.each do |service_template|
                 next unless service_template['NAME'] == tuple
 
+                client.logger.info("Found matching flow template for tuple: #{tuple}")
+
                 merge_template = {
                     'roles' => []
                 }
-                schevice = Function.map_user_template(specification)
+                user_template = Function.map_user_template(specification) + "FLAVOURS=\"#{tuple}\""
 
                 ProvisionEngine::Function::FUNCTIONS.each do |role|
                     next unless specification[role] && !specification[role]['FLAVOUR'].empty?
@@ -418,15 +419,17 @@ module ProvisionEngine
                             return ProvisionEngine::Error.new(500, error)
                         end
 
-                        override = ProvisionEngine::Function.vm_template_contents(specification[role], vm_template,
+                        vm_template = ProvisionEngine::Function.map_vm_template(specification[role], vm_template,
                                                                                   client.conf[:capacity])
 
+                        vm_template_contents = "#{vm_template}\n#{user_template}"
+
                         client.logger.info("Applying \"vm_template_contents\" to role #{role}")
-                        client.logger.debug(override)
+                        client.logger.debug(vm_template_contents)
 
                         merge_template['roles'] << {
                             'name' => role,
-                            'vm_template_contents' => "#{override}\n#{schevice}"
+                            'vm_template_contents' => vm_template_contents
                         }
                     end
                 end
@@ -597,7 +600,7 @@ module ProvisionEngine
         # @return [String] FaasName possibly + -DaasName if DaaS flavour is specified
         #
         def self.tuple(specification)
-            tuple = specification['FAAS']['FLAVOUR']
+            tuple = specification['FAAS']['FLAVOUR'].dup
 
             if specification['DAAS'] && !specification['DAAS']['FLAVOUR'].empty?
                 tuple << "-#{specification['DAAS']['FLAVOUR']}"

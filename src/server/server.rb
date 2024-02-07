@@ -25,11 +25,12 @@ require 'error'
 require 'runtime'
 require 'function'
 
+VERSION = '1.2.0'
+
 ############################################################################
 # API configuration
 ############################################################################
 
-VERSION = '1.1.0'
 conf = ProvisionEngine::Configuration.new
 
 configure do
