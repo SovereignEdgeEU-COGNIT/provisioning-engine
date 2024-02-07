@@ -419,8 +419,7 @@ module ProvisionEngine
                             return ProvisionEngine::Error.new(500, error)
                         end
 
-                        vm_template = ProvisionEngine::Function.map_vm_template(specification[role], vm_template,
-                                                                                  client.conf[:capacity])
+                        vm_template = ProvisionEngine::Function.map_vm_template(specification[role], vm_template, client)
 
                         vm_template_contents = "#{vm_template}\n#{user_template}"
 

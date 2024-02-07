@@ -91,6 +91,7 @@ def verify_sr_spec(specification, runtime)
         # Verify VM.USER_TEMPLATE
 
         expect(vm["#{UT}FLAVOURS"]).to eq(ProvisionEngine::ServerlessRuntime.tuple(specification))
+        expect(Base64.decode64(vm["#{T}/CONTEXT/SR_AUTH"])).to eq(@conf[:client][:engine].user + ':' + @conf[:client][:engine].pass)
 
         if specification.key?('SCHEDULING')
             specification['SCHEDULING'].each do |k, v|

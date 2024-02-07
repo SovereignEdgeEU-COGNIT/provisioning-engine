@@ -23,6 +23,8 @@ module ProvisionEngine
         # @param [String] endpoint where the engine is running
         # @param [String] credentials in the form of user:pass
         #
+        attr_accessor :user, :pass
+
         def initialize(endpoint, auth = nil)
             if auth.nil?
                 @user = nil

@@ -5,9 +5,10 @@ module ProvisionEngine
     #
     class CloudClient
 
-        attr_accessor :conf, :client_oned, :client_oneflow, :logger
+        attr_accessor :conf, :client_oned, :client_oneflow, :logger, :auth
 
         def initialize(conf, auth)
+            @auth = auth
             @conf = conf
             @logger = ProvisionEngine::Logger.new(conf[:log], 'CloudClient')
 

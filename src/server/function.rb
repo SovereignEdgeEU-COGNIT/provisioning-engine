@@ -139,11 +139,12 @@ module ProvisionEngine
         #
         # @param [Hash] specification Function specification found in Serverless Runtime definition
         # @param [OpenNebula::Template] vm_template Function baseline VM template
-        # @param [Hash] conf_capacity Engine configuration attribute for max capacity assumptions
+        # @param [Cloudclient] client OpenNebula client interface
         #
         # @return [String] vm_template contents for a oneflow service template
         #
-        def self.map_vm_template(specification, vm_template, conf_capacity)
+        def self.map_vm_template(specification, vm_template, client)
+            conf_capacity = client.conf[:capacity]
             disk_size = specification['DISK_SIZE']
             disk_size ||= conf_capacity[:disk][:default]
 
@@ -170,6 +171,11 @@ module ProvisionEngine
             memory_max = memory * conf_capacity[:memory][:mult]
             vcpu_max = cpu * conf_capacity[:cpu][:mult]
 
+            # Append Create API Call credentials to VM.CONTEXT on base64
+            context = vm_template.template_like_str("#{T}CONTEXT")
+            context << "\n#{"SR_AUTH=\"#{Base64.encode64(client.auth)}\""}"
+            context.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
+
             xaas = []
 
             xaas << "HOT_RESIZE=[CPU_HOT_ADD_ENABLED=YES,\nMEMORY_HOT_ADD_ENABLED=YES]"
@@ -180,6 +186,7 @@ module ProvisionEngine
             xaas << "MEMORY=#{memory}"
             xaas << "VCPU_MAX=#{vcpu_max}"
             xaas << "MEMORY_MAX=#{memory_max}"
+            xaas << "CONTEXT=[#{context}]"
 
             xaas.join("\n")
         end
