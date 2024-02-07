@@ -6,6 +6,7 @@
 require 'json'
 require 'yaml'
 require 'securerandom'
+require 'base64'
 
 # Gems
 require 'rspec'

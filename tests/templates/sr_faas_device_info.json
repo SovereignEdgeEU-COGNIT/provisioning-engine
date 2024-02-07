@@ -4,7 +4,7 @@
       "FLAVOUR": "Function"
     },
     "DEVICE_INFO": {
-      "LATENCY_TO_PE": 100,
+      "LATENCY_TO_PE": 0.360587,
       "GEOGRAPHIC_LOCATION": "Madrid"
     }
   }

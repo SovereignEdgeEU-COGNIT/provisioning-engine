@@ -65,7 +65,7 @@ RSpec.shared_context 'crud' do |sr_template|
             else
                 verify_error(runtime)
 
-                raise "Unexpected error code #{rc}"
+                raise "Unexpected error code #{rc}\n#{runtime}"
             end
         end
     end
