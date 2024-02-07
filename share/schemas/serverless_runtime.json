@@ -110,8 +110,9 @@
           "description": "Information about the engine Client Device environment",
           "properties": {
             "LATENCY_TO_PE": {
-              "type": "integer",
-              "description": "Latency from the client device to the Provisioning Engine endpoint in miliseconds"
+              "type": "number",
+              "format": "float",
+              "description": "Latency from the client device to the Provisioning Engine endpoint in seconds"
             },
             "GEOGRAPHIC_LOCATION": {
               "type": "string",

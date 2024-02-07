@@ -222,6 +222,8 @@ def randomize_schevice?(specification)
         specification[SRR][schevice].each do |k, v|
             if v.is_a?(Integer)
                 specification[SRR][schevice][k] = rand(2147483647)
+            elsif v.is_a?(Float)
+                specification[SRR][schevice][k] = rand
             else
                 specification[SRR][schevice][k] = SecureRandom.alphanumeric
             end
