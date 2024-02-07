@@ -3,8 +3,10 @@
     "FAAS": {
       "FLAVOUR": "Function"
     },
-    "DAAS": {
-      "FLAVOUR": "Data"
+    "DEVICE_INFO": {
+      "LATENCY_TO_PE": 100,
+      "GEOGRAPHIC_LOCATION": "Madrid"
     }
   }
 }
+
