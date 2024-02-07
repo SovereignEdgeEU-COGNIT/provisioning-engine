@@ -172,9 +172,15 @@ module ProvisionEngine
             vcpu_max = cpu * conf_capacity[:cpu][:mult]
 
             # Append Create API Call credentials to VM.CONTEXT on base64
-            context = vm_template.template_like_str("#{T}CONTEXT")
-            context << "\n#{"SR_AUTH=\"#{Base64.encode64(client.auth)}\""}"
-            context.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
+            auth64 = "SR_AUTH=\"#{Base64.encode64(client.auth)}\""
+
+            begin
+                context = vm_template.template_like_str("#{T}CONTEXT")
+                context << "\n#{auth64}"
+                context.gsub!(/"$/, '",').reverse!.sub!(',', '').reverse!
+            rescue NoMethodError # triggers when Function VM Template has no CONTEXT defined
+                context=auth64
+            end
 
             xaas = []
 

@@ -58,6 +58,8 @@ def verify_sr_spec(specification, runtime)
             expect(runtime[role].key?(mandatory)).to be(true)
         end
 
+        expect(Base64.decode64(vm["#{T}/CONTEXT/SR_AUTH"])).to eq(@conf[:client][:engine].user + ':' + @conf[:client][:engine].pass)
+
         # optional role information exists if given
         ['CPU', 'VCPU', 'MEMORY', 'DISK_SIZE'].each do |optional|
             next unless specification[role][optional]
@@ -89,9 +91,7 @@ def verify_sr_spec(specification, runtime)
         end
 
         # Verify VM.USER_TEMPLATE
-
         expect(vm["#{UT}FLAVOURS"]).to eq(ProvisionEngine::ServerlessRuntime.tuple(specification))
-        expect(Base64.decode64(vm["#{T}/CONTEXT/SR_AUTH"])).to eq(@conf[:client][:engine].user + ':' + @conf[:client][:engine].pass)
 
         if specification.key?('SCHEDULING')
             specification['SCHEDULING'].each do |k, v|
