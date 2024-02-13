@@ -394,7 +394,7 @@ module ProvisionEngine
                 merge_template = {
                     'roles' => []
                 }
-                user_template = Function.map_user_template(specification) + "FLAVOURS=\"#{tuple}\""
+                user_template = Function.map_user_template(specification) + "FLAVOURS=\"#{service_template['ID']}\""
 
                 ProvisionEngine::Function::FUNCTIONS.each do |role|
                     next unless specification[role] && !specification[role]['FLAVOUR'].empty?

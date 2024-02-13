@@ -1,6 +1,6 @@
 openapi: "3.0.0"
 info:
-  version: "1.3.0"
+  version: "1.3.1"
   title: "Provisioning Engine REST API"
   description: Provides FaaS capabilities by leveraging features from OpenNebula. Allows to manage Serverless Runtime instances based on a group of Functions defined on request.
 
