@@ -144,7 +144,7 @@ module ProvisionEngine
             specification = specification[SRR]
 
             ProvisionEngine::Function::FUNCTIONS.each do |function|
-                next if specification[function].nil? || specification[function]['FLAVOUR'].empty? || @body[function].nil?
+                next if specification[function].nil? || @body[function].nil?
 
                 vm_id = @body[function]['VM_ID']
                 if vm_id.nil?
