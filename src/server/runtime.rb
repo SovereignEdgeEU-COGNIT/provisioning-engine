@@ -148,9 +148,8 @@ module ProvisionEngine
 
                 vm_id = @body[function]['VM_ID']
                 if vm_id.nil?
-                    rc = 500
-                    error = "No VM_ID found for function #{function}"
-                    return ProvisionEngine::Error.new(rc, error)
+                    $logger.warning "No VM_ID found for function #{function}"
+                    next
                 end
 
                 vm = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)
@@ -634,9 +633,8 @@ module ProvisionEngine
 
                 vm_id = @body[function]['VM_ID']
                 if vm_id.nil?
-                    rc = 500
-                    error = "No VM_ID found for function #{function}"
-                    return ProvisionEngine::Error.new(rc, error)
+                    $logger.warning "No VM_ID found for function #{function}"
+                    next
                 end
 
                 vm = ProvisionEngine::Function.new_with_id(vm_id, @cclient.client_oned)

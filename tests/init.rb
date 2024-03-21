@@ -86,7 +86,9 @@ RSpec.describe 'Provision Engine API' do
             require 'log'
             require 'logger'
 
+            $logger = ProvisionEngine::Logger.new(conf_engine[:log], 'purge')
             client = ProvisionEngine::CloudClient.new(conf_engine, auth)
+
             response = client.service_pool_get
             expect(response[0]).to eq(200)
 
