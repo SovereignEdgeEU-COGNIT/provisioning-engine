@@ -25,22 +25,22 @@ require 'error'
 require 'runtime'
 require 'function'
 
-VERSION = '1.3.2'
+VERSION = '1.3.3'
 
 ############################################################################
 # API configuration
 ############################################################################
 
 conf = ProvisionEngine::Configuration.new
+$logger = ProvisionEngine::Logger.new(conf[:log])
 
 configure do
     set :bind, conf[:host]
     set :port, conf[:port]
-    set :logger, ProvisionEngine::Logger.new(conf[:log])
 end
 
-settings.logger.info "Using oned at #{conf[:one_xmlrpc]}"
-settings.logger.info "Using oneflow at #{conf[:oneflow_server]}"
+$logger.info "Using oned at #{conf[:one_xmlrpc]}"
+$logger.info "Using oneflow at #{conf[:oneflow_server]}"
 
 ############################################################################
 # Routes setup
@@ -50,7 +50,7 @@ settings.logger.info "Using oneflow at #{conf[:oneflow_server]}"
 before do
     if conf[:log][:level] == 0
         call = "API Call: #{request.request_method} #{request.fullpath} #{request.body.read}"
-        settings.logger.debug(call)
+        $logger.debug(call)
         request.body.rewind
     end
 end
@@ -263,7 +263,7 @@ def auth?
         rc = 401
         error = 'Authentication required'
 
-        settings.logger.error(error)
+        $logger.error(error)
         halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error))
     end
 
@@ -274,7 +274,7 @@ def auth?
         rc = 401
         error = 'Unsupported authentication scheme'
 
-        [error, auth_header].each {|i| settings.logger.error(i) }
+        [error, auth_header].each {|i| $logger.error(i) }
         halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, auth_header))
     end
 
@@ -288,13 +288,13 @@ def body_valid?
         rc = 400
         error = 'Invalid JSON'
 
-        [error, e.message].each {|i| settings.logger.error(i) }
+        [error, e.message].each {|i| $logger.error(i) }
         halt rc, json_response(rc, ProvisionEngine::Error.new(rc, error, e.message))
     end
 end
 
 def log_request(type)
-    settings.logger.info("Received request to #{type}")
+    $logger.info("Received request to #{type}")
 end
 
 def log_response(level, code, data, message)
@@ -304,7 +304,7 @@ def log_response(level, code, data, message)
         body = data.to_json
     end
 
-    settings.logger.info("#{RC}: #{code}")
-    settings.logger.send(level, message)
-    settings.logger.debug("Response Body: #{body}")
+    $logger.info("#{RC}: #{code}")
+    $logger.send(level, message)
+    $logger.debug("Response Body: #{body}")
 end

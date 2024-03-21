@@ -39,13 +39,13 @@ module ProvisionEngine
             service_id = response[1]['DOCUMENT']['ID'].to_i
             specification['SERVICE_ID'] = service_id
 
-            client.logger.info("#{SRS} #{service_id} created")
+            $logger.info("#{SRS} #{service_id} created")
 
             response = ServerlessRuntime.sync(client, specification)
             return response unless response[0] == 200
 
-            client.logger.info("Creating #{SRD}")
-            client.logger.debug(specification)
+            $logger.info("Creating #{SRD}")
+            $logger.debug(specification)
 
             xml = ServerlessRuntime.build_xml
             runtime = ServerlessRuntime.new(xml, client.client_oned)
@@ -66,7 +66,7 @@ module ProvisionEngine
                 return ProvisionEngine::Error.new(rc, error, message)
             end
 
-            client.logger.info("Created #{SRD}")
+            $logger.info("Created #{SRD}")
 
             runtime.info
 
@@ -115,7 +115,7 @@ module ProvisionEngine
             response = ProvisionEngine::ServerlessRuntime.sync(@cclient, @body)
             return response unless response[0] == 200
 
-            @cclient.logger.info("Updating #{SRD} #{@id}")
+            $logger.info("Updating #{SRD} #{@id}")
             response = super()
 
             if OpenNebula.is_error?(response)
@@ -162,13 +162,13 @@ module ProvisionEngine
                     return ProvisionEngine::Error.new(rc, error, response.message)
                 end
 
-                @cclient.logger.info "Looking for changes for function #{function}"
+                $logger.info "Looking for changes for function #{function}"
 
                 changes = specification[function].dup.delete_if do |k, v|
                     @body[function][k] == v
                 end
 
-                @cclient.logger.debug changes
+                $logger.debug changes
 
                 # Resize VM hardware
                 case vm.state_function
@@ -184,7 +184,7 @@ module ProvisionEngine
                 when ProvisionEngine::Function::STATES[:running]
                     ['capacity', 'disk'].each do |resource|
                         response = vm.public_send("resize_#{resource}?", specification[function],
-                                                  @cclient.logger)
+                                                  $logger)
                         return response unless response[0] == 200
 
                         1.upto(@cclient.conf[:timeout]) do |t|
@@ -240,7 +240,7 @@ module ProvisionEngine
         # @return [Array] [Response Code, ''/Error]
         #
         def delete
-            cclient? && @cclient.logger.info("Deleting #{SRS}")
+            cclient? && $logger.info("Deleting #{SRS}")
 
             document = JSON.parse(to_json)
             service_id = document['DOCUMENT']['TEMPLATE']['BODY']['SERVICE_ID']
@@ -248,13 +248,13 @@ module ProvisionEngine
             response = @cclient.service_delete(service_id)
             rc = response[0]
 
-            @cclient.logger.warning(SRS_NOT_FOUND) if rc == 404
+            $logger.warning(SRS_NOT_FOUND) if rc == 404
 
             if ![204, 404].include?(rc)
                 error = "#{SRS_NO_DELETE} #{service_id}"
                 message = response[1]
 
-                [error, message].each {|i| @cclient.logger.error(i) }
+                [error, message].each {|i| $logger.error(i) }
 
                 response = @cclient.service_destroy(service_id)
 
@@ -264,7 +264,7 @@ module ProvisionEngine
                 end
             end
 
-            @cclient.logger.info("Deleting #{SRD}")
+            $logger.info("Deleting #{SRD}")
 
             response = super()
 
@@ -274,7 +274,7 @@ module ProvisionEngine
                 return ProvisionEngine::Error.new(rc, error, response.message)
             end
 
-            @cclient.logger.info("#{SRD} deleted")
+            $logger.info("#{SRD} deleted")
             [204, '']
         end
 
@@ -335,13 +335,13 @@ module ProvisionEngine
                         next unless role['nodes'].size < role['cardinality']
 
                         msg = "Waiting #{t} seconds for service role #{role['name']} VMs"
-                        client.logger.info(msg)
+                        $logger.info(msg)
                         sleep 1
 
                         throw(:query_service)
                     end
 
-                    client.logger.debug(service)
+                    $logger.debug(service)
 
                     roles.each do |role|
                         id = role['nodes'][0]['vm_info']['VM']['ID'].to_i
@@ -389,7 +389,7 @@ module ProvisionEngine
             service_templates.each do |service_template|
                 next unless service_template['NAME'] == tuple
 
-                client.logger.info("Found matching flow template for tuple: #{tuple}")
+                $logger.info("Found matching flow template for tuple: #{tuple}")
 
                 merge_template = {
                     'roles' => []
@@ -419,12 +419,14 @@ module ProvisionEngine
                             return ProvisionEngine::Error.new(500, error)
                         end
 
-                        vm_template = ProvisionEngine::Function.map_vm_template(specification[role], vm_template, client)
+                        vm_template = ProvisionEngine::Function.map_vm_template(
+                            specification[role], vm_template, client
+                        )
 
                         vm_template_contents = "#{vm_template}\n#{user_template}"
 
-                        client.logger.info("Applying \"vm_template_contents\" to role #{role}")
-                        client.logger.debug(vm_template_contents)
+                        $logger.info("Applying \"vm_template_contents\" to role #{role}")
+                        $logger.debug(vm_template_contents)
 
                         merge_template['roles'] << {
                             'name' => role,
@@ -455,7 +457,7 @@ module ProvisionEngine
                 end
 
                 service = rb
-                client.logger.debug(service)
+                $logger.debug(service)
 
                 if client.service_fail?(service)
                     error = "#{SRS} #{service_id} entered FAILED state after creation"
@@ -526,8 +528,8 @@ module ProvisionEngine
 
             return [200, ''] unless new_name && new_name != name
 
-            @cclient.logger.info("Renaming #{SRD} #{@id}")
-            @cclient.logger.debug("From: #{name} To: #{new_name}")
+            $logger.info("Renaming #{SRD} #{@id}")
+            $logger.debug("From: #{name} To: #{new_name}")
 
             response = rename(new_name)
 

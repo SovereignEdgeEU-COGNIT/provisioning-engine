@@ -10,7 +10,7 @@ module ProvisionEngine
         def initialize(conf, auth)
             @auth = auth
             @conf = conf
-            @logger = ProvisionEngine::Logger.new(conf[:log], 'CloudClient')
+            @logger = $logger
 
             create_client_oned(auth, conf[:one_xmlrpc])
             create_client_oneflow(auth, conf[:oneflow_server])
