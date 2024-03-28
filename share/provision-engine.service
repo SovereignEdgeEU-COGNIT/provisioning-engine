@@ -1,0 +1,13 @@
+[Unit]
+Description=Provision Engine Server
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/provision-engine-server start
+ExecStop=/usr/bin/provision-engine-server stop
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -12,6 +12,7 @@ install() {
 
 	src_conf="$(realpath "share/etc/$CONF_FILE")"
 	src_exec="$(realpath src/server/cli/provision-engine-server)"
+	src_systemd="$(realpath share/$SYSTEMD_UNIT)"
 
 	if [[ $setup_mode == "copy" ]]; then
 		# config
@@ -22,6 +23,7 @@ install() {
 
 		# executable
 		[ -f "$EXEC_PATH" ] || sudo cp "$src_exec" "$EXEC_PATH"
+		[ "$(uname)" == Linux ] && sudo cp "$src_systemd" "$SYSTEMD_UNIT_PATH"
 
 		# libraries
 		for file in $MODULES; do
@@ -36,12 +38,14 @@ install() {
 
 		# executable
 		[ -L "$EXEC_PATH" ] || sudo ln -s "$src_exec" "$EXEC_PATH"
+		[ "$(uname)" == Linux ] && sudo ln -s "$src_systemd" "$SYSTEMD_UNIT_PATH"
 
 		# libraries
 		for file in $MODULES; do
 			[ -L "$INSTALL_DIR/${file}" ] || ln -s "$(realpath "src/server/${file}")" "${INSTALL_DIR}"
 		done
 	fi
+
 }
 
 postinstall() {
@@ -63,6 +67,7 @@ clean() {
 	fi
 
 	[ -f "$EXEC_PATH" ] || [ -L "$EXEC_PATH" ] && sudo rm $EXEC_PATH
+	[ -f "$SYSTEMD_UNIT_PATH" ] || [ -L "$SYSTEMD_UNIT_PATH" ] && sudo rm $SYSTEMD_UNIT_PATH
 	[ -d "$INSTALL_DIR" ] && rm -rf "$INSTALL_DIR"
 }
 
@@ -83,6 +88,8 @@ SCHEMAS="serverless_runtime.json error.json config.json"
 
 EXEC_FILE="provision-engine-server"
 EXEC_PATH="/usr/local/bin/${EXEC_FILE}"
+SYSTEMD_UNIT="provision-engine.service"
+SYSTEMD_UNIT_PATH="/etc/systemd/system/$SYSTEMD_UNIT"
 
 INSTALL_DIR="/opt/provision-engine"
 MODULES="client.rb configuration.rb log.rb server.rb runtime.rb error.rb function.rb"

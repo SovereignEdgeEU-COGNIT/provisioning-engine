@@ -24,13 +24,13 @@ jobs:
         run: cd ./tests && ./prepare.rb "${{ env.oned }}" "${{ env.oneflow }}"
 
       - name: Start engine
-        run: provision-engine-server start && sleep 2
+        run: sudo systemctl start provision-engine && sleep 2
 
       - name: Rspec
         run: cd ./tests && rspec init.rb
 
       - name: Stop engine
-        run: provision-engine-server stop
+        run: sudo systemctl stop provision-engine
 
       - name: Uninstall
         run: ./install.sh purge
