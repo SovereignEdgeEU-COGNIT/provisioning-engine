@@ -42,8 +42,13 @@ stop() {
 	fi
 }
 
+restart() {
+	stop
+	start
+}
+
 help() {
-	echo "Usage: ${PES} {start|stop} <debug>"
+	echo "Usage: ${PES} {start|stop|restart} <debug>"
 }
 
 if [ "$1" == 'start' ]; then
